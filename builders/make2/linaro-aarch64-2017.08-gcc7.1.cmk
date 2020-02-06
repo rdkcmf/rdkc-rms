@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#Set all the build parameters
+TOOLCHAIN_DIR=$RDK_TOOLCHAIN_PATH
+TOOLCHAIN_PREFIX=/bin/aarch64-linux-gnu-
+
+#RDKC_ROOT=${RDK_SOURCE_PATH}
+#RDKC_SDK_SRC=$RDKC_ROOT/sdk/fsroot/src
+#RDKC_STREAM_INCLUDE=/disk2/opt/comcast/sercomm/librdkcstream
+
+export SSL_ARCH=linux-armv4
+export BIND_ID=86
+export TARGET_OS_NAME=Linaro
+export TARGET_OS_VERSION=gcc7.1
+export TARGET_OS_ARCH=aarch64
+export TARGET_OS_UNAME=linaro-aarch64-2017.08-gcc7.1
+
+export PLATFORM_INCLUDE="-I$RDK_PROJECT_ROOT_PATH/opensource/include -I$RDK_PROJECT_ROOT_PATH/opensource/openssl/include -I$RDK_PROJECT_ROOT_PATH/rdklogger/include  -I$RDK_PROJECT_ROOT_PATH/utility/sysUtils/include  -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/usr/local/include  -I$RDK_PROJECT_ROOT_PATH/opensource/src/soxr/src/ -I$RDK_PROJECT_ROOT_PATH/opensource/src/rtmessage  -I$RDK_PROJECT_ROOT_PATH/mfrlibs/include -I$RDK_PROJECT_ROOT_PATH/camera-hal/streamer -I$RDK_PROJECT_ROOT_PATH/camera-hal/streamer/xBroker -I$RDK_PROJECT_ROOT_PATH/camera-hal/streamer/xBroker/xConsumer -I$RDK_PROJECT_ROOT_PATH/camera-hal/streamer/xaudio/ -I$RDK_PROJECT_ROOT_PATH/utility/misc/include -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/amba/include/arch_s5l -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/amba -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/amba/include "  
+
+export PLATFORM_LIBS="-L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv8-a/alsa-lib/usr/lib  -L$RDK_PROJECT_ROOT_PATH/opensource/lib -L$RDK_PROJECT_ROOT_PATH/opensource/src/soxr/build/src/ -lsoxr -L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/vendor/img/fs/shadow_root/usr/lib  -L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/usr/lib -L$RDK_PROJECT_ROOT_PATH/rdklogger/src/.libs -lrdkloggers -lssl   -lcrypto  -llog4c -lmxml -ldl -lrt -lpthread -lasound -lsysutils -lmfrApi -lsccomm -lcgicomm -L$RDK_PROJECT_ROOT_PATH/opensource/src/rtmessage/ -lrtMessage -L$RDK_PROJECT_ROOT_PATH/opensource/lib/ -lcjson -ljansson -L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/vendor/img/fs/root/usr/lib -lstreamerhal -lstreamerconsumer -L$RDK_PROJECT_ROOT_PATH/opensource/lib -lcurl -lz -L$(PROJ_ROOT)/amba/prebuild/ambarella/library/dewarp/lib/arch_s5l/ -ldewarp -L$RDK_PROJECT_ROOT_PATH/utility/misc/src/ -lmiscutils -L$RDK_PROJECT_ROOT_PATH/plugins/xaudio/ -lxaudioapi"
+
+
+#export PLATFORM_INCLUDE="-I$RDK_PROJECT_ROOT_PATH/opensource/include -I$RDK_PROJECT_ROOT_PATH/opensource/openssl/include -I$RDK_PROJECT_ROOT_PATH/rdklogger/include -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/share/sc_config -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/share/sc_config/include -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/share/libsccomm/inc -I$RDK_PROJECT_ROOT_PATH/sysapps/apps/cgi/libcgicomm/inc -I$RDK_PROJECT_ROOT_PATH/sysapps/apps/cgi/include -I$RDK_PROJECT_ROOT_PATH/sysapps/apps/cgi/librdkcstream -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/usr/local/include -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/amba/prebuild/third-party/armv7-a-hf/aac/include -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/amba/prebuild/third-party/armv7-a-hf/alsa-lib/include -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/amba/include -I$RDK_PROJECT_ROOT_PATH/plugins/xaudio/ -I$RDK_PROJECT_ROOT_PATH/opensource/src/soxr/src/ "
+
+#export PLATFORM_LIBS="-L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src//share/libsccomm/bin -L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src//amba/prebuild/third-party/armv7-a-hf/alsa-lib/usr/lib  -L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/../../../opensource/lib -L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/vendor/img/fs/shadow_root/usr/lib -L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/vendor/img/fs/shadow_root/usr/lib -L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/usr/lib -L$RDK_PROJECT_ROOT_PATH/rdklogger/src/.libs -lrdkloggers -lrdkcstream -lcgicomm -lssl -lsccomm -lasound -lcrypto  -llog4c -lmxml -ldl -lrt -lpthread -L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src//amba/prebuild/third-party/armv7-a-hf/aac/lib -laacdec -L$RDK_PROJECT_ROOT_PATH/plugins/xaudio/ -lxaudioapi -L$RDK_PROJECT_ROOT_PATH/opensource/src/soxr/build/src/ -lsoxr "
+
+#export PLATFORM_INCLUDE="-I$RDK_SOURCE_PATH/opensource/openssl/include -I$RDK_TOOLCHAIN_PATH/include  -I$RDK_PROJECT_ROOT_PATH/sysapps/apps/cgi/librdkcstream/ -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/share/libsccomm/inc -I$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/src/share/sc_config  -I$RDKC_ROOT/rdklogger/include "
+#export PLATFORM_LIBS="-L$RDKC_ROOT/sysapps/userland/openssl/lib -L$TOOLCHAIN_DIR/lib -L$TOOLCHAIN_DIR/openssl/image/usr/lib/ -L$RDKC_SDK_SRC/vendor/img/fs/shadow_root/usr/lib -L$RDKC_SDK_SRC/amba/prebuild/third-party/armv7-a-hf/alsa-lib/usr/lib -lrdkcstream -lcgicomm -lssl -lsccomm -lasound -lcrypto -lrdklogger -llog4c -lmxml -ldl -lrt -lpthread "
+
+#export PLATFORM_DEFINES=" -DLINUX -DLITTLE_ENDIAN_SHORT_ALIGNED -DNET_EPOLL -DHAS_EPOLL_TIMERS -DGLOBALLY_ACCOUNT_BYTES -DHAS_PROTOCOL_API -DHAS_G711 -DHAS_PROTOCOL_RAWMEDIA -DUSE_CUSTOM_SSL -DWRTC_CAPAB_HAS_HEARTBEAT "
+export PLATFORM_DEFINES=" -DLINUX -DLITTLE_ENDIAN_SHORT_ALIGNED -DNET_EPOLL -DHAS_EPOLL_TIMERS -DGLOBALLY_ACCOUNT_BYTES -DHAS_PROTOCOL_API -DHAS_G711  -DHAS_PROTOCOL_RAWMEDIA -DUSE_CUSTOM_SSL -DWRTC_CAPAB_HAS_HEARTBEAT -DPLAYBACK_SUPPORT  -DOPENSSL_API_COMPAT=0x10100000L  -DRTMSG -DUSE_MFRLIB  -DRDKC  -D_HAS_XSTREAM_"
+export PLATFROM_COMPILE_SWITCHES="-g -O3 -fdata-sections -ffunction-sections -Wno-literal-suffix"
+export PLATFROM_LINK_SWITCHES="-g -Wl,--gc-sections  -Wl,-rpath-link=$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/vendor/img/fs/shadow_root/usr/lib/ -Wl,-rpath-link=$RDK_PROJECT_ROOT_PATH/sdk/fsroot/ramdisk/usr/lib/ -Wl,-rpath-link=$(PROJ_ROOT)/amba/prebuild/ambarella/library/dewarp/lib/arch_s5l/"
+export STRIP_PARAMS="-s -S -g -x -X"
+
+#xstreamer specific includes and libraries. These will be included only if ENABLE_XSTREAMER is made true rdk_build.sh
+#export XSTREAM_INCLUDE="-I$RDK_PROJECT_ROOT_PATH/streamerhal -I$RDK_PROJECT_ROOT_PATH/streamerhal/xstream/test_app -I$RDK_PROJECT_ROOT_PATH/streamerhal/xstream/include -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/amba/include -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/amba/include/arch_s3l -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/amba "
+#export XSTREAM_LIBS="-L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/vendor/img/fs/root/usr/lib -lstreamerhal -lstreamerproducer -lstreamerconsumer -L$RDK_PROJECT_ROOT_PATH/opensource/lib -lcurl -lz "
