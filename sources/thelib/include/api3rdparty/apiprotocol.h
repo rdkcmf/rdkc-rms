@@ -18,15 +18,20 @@
 # limitations under the License.
 ##########################################################################
 **/
-
 #ifdef HAS_PROTOCOL_API
 #ifndef _APIPROTOCOL_H
 #define	_APIPROTOCOL_H
 
 #include "protocols/baseprotocol.h"
 #include "utils/buffering/iobufferext.h"
+
+#ifdef _HAS_XSTREAM_
+#include "xStreamerConsumer.h"
+#else
 #include "RdkCVideoCapturer.h"
 #include "RdkCPluginFactory.h"
+#endif //_HAS_XSTREAM_
+
 #ifdef NET_EPOLL
 #include "netio/epoll/iohandler.h"
 #endif /* NET_EPOLL */
@@ -49,9 +54,12 @@
 #define SAMPLE_RATE_16K		16000
 #define SAMPLE_RATE_8K		8000
 
+#ifdef HAS_DOWNSAMPLE
 extern "C" {
 #include "soxr.h"
 }
+#endif //HAS_DOWNSAMPLE
+
 #endif /* SDK_DISABLED */
 class DLLEXP ApiProtocol : public BaseProtocol {
 public:
@@ -71,7 +79,9 @@ public:
 	virtual bool Terminate();
 	virtual bool FeedData();
 	int32_t GetStreamFd();
+#ifdef HAS_DOWNSAMPLE
 	void InitializeSoXR();
+#endif
 
 #ifdef HAS_THREAD
 	bool FeedAsync(Variant &params);
@@ -85,8 +95,13 @@ protected:
 
 private:
 #ifndef SDK_DISABLED
-        video_stream_config_t *_videoConfig;
-        audio_stream_config_t *_audioConfig;
+#ifdef _HAS_XSTREAM_
+	stream_hal_stream_config _videoConfig;
+	stream_hal_audio_config _audioConfig;
+#else
+	video_stream_config_t *_videoConfig;
+	audio_stream_config_t *_audioConfig;
+#endif //_HAS_XSTREAM_
 #endif /* SDK_DISABLED */
 	IOHandler *_pIoHandler;
 	IOBufferExt _outputBuffer;
@@ -99,24 +114,31 @@ private:
 	bool _feeding;
 #endif  /* HAS_THREAD */
 
-        static RdkCPluginFactory* plugin_factory; //creating plugin factory instance
-        static RdkCVideoCapturer* recorder;
-
-        camera_resource_config_t *conf;
+#ifdef _HAS_XSTREAM_
+	XStreamerConsumer objConsumer;
+	frameInfoH264 *appFrameInfo;
+#else
+	static RdkCPluginFactory* plugin_factory; //creating plugin factory instance
+	static RdkCVideoCapturer* recorder;
+	camera_resource_config_t *conf;
+#endif //_HAS_XSTREAM_
 
 #if !defined ( RMS_PLATFORM_RPI )
-        /* soxr parameters */
-        soxr_error_t error;
-        soxr_t _soxr;
+#ifdef HAS_DOWNSAMPLE
+	/* soxr parameters */
+	soxr_error_t error;
+	soxr_t _soxr;
 	bool is_soxr_initialized;
 	// io specification
 	soxr_io_spec_t io_spec;
 	// quality specification
 	unsigned long quality;
-        soxr_quality_spec_t qt_spec;
+	soxr_quality_spec_t qt_spec;
 	// runtime specification regarding number of allowed threads
 	soxr_runtime_spec_t rt_spec;
+#endif //HAS_DOWNSAMPLE
 #endif
+
 };
 
 #endif	/* _APIPROTOCOL_H */

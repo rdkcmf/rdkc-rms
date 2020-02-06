@@ -47,17 +47,22 @@ FILE *pcmFd;
 
 static int is_gst_enabled = RDKC_FAILURE;
 
+#ifndef _HAS_XSTREAM_
 RdkCPluginFactory* ApiProtocol::plugin_factory;
 RdkCVideoCapturer* ApiProtocol::recorder;
+#endif
 
 ApiProtocol::ApiProtocol() : BaseProtocol(PT_API_INTEGRATION) {
-	_streamId = 0;
-	_streamFd = 0;
+	_streamFd = -1;
 	_pIoHandler = NULL;
+
 #if !defined ( RMS_PLATFORM_RPI )
+#ifdef HAS_DOWNSAMPLE
 	_soxr = NULL;
-        is_soxr_initialized = false;
+	is_soxr_initialized = false;
+#endif
 #endif /* RMS_PLATFORM_RPI */
+
 #ifdef HAS_THREAD
 	_feeding = false;
 #endif /* HAS_THREAD */
@@ -70,7 +75,9 @@ ApiProtocol::~ApiProtocol() {
 bool ApiProtocol::Initialize(Variant &config) {
 
         int ret = true;
+
 #if !defined ( RMS_PLATFORM_RPI )
+#ifndef _HAS_XSTREAM_
         conf = new camera_resource_config_t;
         plugin_factory = CreatePluginFactoryInstance();
         if( NULL == plugin_factory ) {
@@ -87,7 +94,8 @@ bool ApiProtocol::Initialize(Variant &config) {
             }
         }
 	INFO("%s(%d): Recoder is created successfully",  __FILE__, __LINE__);
-#endif
+#endif //_HAS_XSTREAM_
+#endif // RMS_PLATFORM_RPI
 	return ret;
 }
 
@@ -105,6 +113,7 @@ void ApiProtocol::SetIOHandler(IOHandler *pIOHandler) {
 }
 
 #if !defined ( RMS_PLATFORM_RPI )
+#ifdef HAS_DOWNSAMPLE
 /* Initialize Sound Exchange Resampler */
 void ApiProtocol::InitializeSoXR() {
 
@@ -151,10 +160,9 @@ void ApiProtocol::InitializeSoXR() {
 		INFO("Initialization of Sound Exchange Resampler failed _SoXR: %x", _soxr);
 		is_soxr_initialized = false;
 	}
-
-
 }
-#endif/* RMS_PLATFORM_RPI */
+#endif // HAS_DOWNSAMPLE
+#endif // RMS_PLATFORM_RPI
 
 bool ApiProtocol::InitializeApi(Variant &config) {
 	_streamId = (uint32_t) config["apiStreamProfileId"];
@@ -173,40 +181,59 @@ bool ApiProtocol::InitializeApi(Variant &config) {
         {
 	    // Initialize the inbound stream, set the defaults
 #ifndef SDK_DISABLED
-	    memset(_videoConfig, 0, sizeof(video_stream_config_t));
-	    INFO("Invoking getVideoStreamConfing");
 
-	    if( recorder->GetVideoStreamConfig((_streamId & VIDEO_MASK), _videoConfig) < 0 ) 
-            {
-	        WARN("getVideoStreamConfig returned <0");
-	    }
+#ifndef _HAS_XSTREAM_
+	memset(_videoConfig, 0, sizeof(video_stream_config_t));
+	INFO("Invoking getVideoStreamConfing");
+	if( recorder->GetVideoStreamConfig((_streamId & VIDEO_MASK), _videoConfig) < 0 ) {
+		WARN("getVideoStreamConfig returned <0");
+	}
+	INFO("InitializeApi : Existing video configurations");
+	INFO("Video stream ID=%" PRIu32, (_streamId & VIDEO_MASK));
+	INFO("stream_type=%" PRIu32, _videoConfig->stream_type);
+	INFO("width=%" PRIu32, _videoConfig->width);
+	INFO("height=%" PRIu32, _videoConfig->height);
+	INFO("frame_rate=%" PRIu32, _videoConfig->frame_rate);
+	INFO("gov_length=%" PRIu32, _videoConfig->gov_length);
+	INFO("profile=%" PRIu32, _videoConfig->profile);
+	INFO("quality_type=%" PRIu32, _videoConfig->quality_type);
+	INFO("quality_level=%" PRIu32, _videoConfig->quality_level);
+	INFO("bit_rate=%" PRIu32, _videoConfig->bit_rate);
+#else
+	memset(&_videoConfig, 0, sizeof (stream_hal_stream_config));
+	INFO("Invoking GetStreamConfig");
+	if( objConsumer.GetStreamConfig((_streamId & VIDEO_MASK), &_videoConfig) < 0 ) {
+		WARN("GetStreamConfig returned <0");
+	}
+	INFO("InitializeApi : Existing video configurations");
+	INFO("Video stream ID=%" PRIu32, (_streamId & VIDEO_MASK));
+	INFO("stream_type=%" PRIu32, _videoConfig.stream_type);
+	INFO("width=%" PRIu32, _videoConfig.width);
+	INFO("height=%" PRIu32, _videoConfig.height);
+	INFO("frame_rate=%" PRIu32, _videoConfig.frame_rate);
+	INFO("gov_length=%" PRIu32, _videoConfig.gov_length);
+	INFO("profile=%" PRIu32, _videoConfig.profile);
+	INFO("quality_type=%" PRIu32, _videoConfig.quality_type);
+	INFO("quality_level=%" PRIu32, _videoConfig.quality_level);
+	INFO("bit_rate=%" PRIu32, _videoConfig.bit_rate);
+#endif //_HAS_XSTREAM
 
-	    INFO("InitializeApi : Existing video configurations");
-	    INFO("Video stream ID=%" PRIu32, (_streamId & VIDEO_MASK));
-	    INFO("stream_type=%" PRIu32, _videoConfig->stream_type);
-	    INFO("width=%" PRIu32, _videoConfig->width);
-	    INFO("height=%" PRIu32, _videoConfig->height);
-	    INFO("frame_rate=%" PRIu32, _videoConfig->frame_rate);
-	    INFO("gov_length=%" PRIu32, _videoConfig->gov_length);
-	    INFO("profile=%" PRIu32, _videoConfig->profile);
-	    INFO("quality_type=%" PRIu32, _videoConfig->quality_type);
-	    INFO("quality_level=%" PRIu32, _videoConfig->quality_level);
-	    INFO("bit_rate=%" PRIu32, _videoConfig->bit_rate);
-
-	    // No need to initialize, we rely on the web admin page
-	    /*
-	    if (rdkc_stream_set_config(_streamId, &_videoConfig) < 0) {
-	        FATAL("rdkc_stream_get_config error!");
+	// No need to initialize, we rely on the web admin page
+	/*
+	if (rdkc_stream_set_config(_streamId, &_videoConfig) < 0) {
+		FATAL("rdkc_stream_get_config error!");
 		return false;
-	    }
-	    */
+	}
+	*/
 
-	    if( !UpdateStreamConfig(config) ) {
+	if( !UpdateStreamConfig(config) ) {
 		INFO("Did not update stream config");
-	    }
+	}
 
-	    memset(_audioConfig, 0, sizeof(audio_stream_config_t));
-	    INFO("Invoking StreamConfig for audio");
+#ifndef _HAS_XSTREAM_
+	memset(_audioConfig, 0, sizeof(audio_stream_config_t));
+	INFO("Invoking StreamConfig for audio");
+
 #ifdef HAS_G711
 	    /* get audio configuration of LPCM */
 	    if( recorder->GetAudioStreamConfig((((_streamId & AUDIO_MASK) & AUDIO_PCM) >> NIBBLE_LENGTH), _audioConfig) < 0) {
@@ -225,95 +252,210 @@ bool ApiProtocol::InitializeApi(Variant &config) {
 	    }
 
 #ifdef HAS_G711
-	    /* Enable audio only if type PCM as rdkc streaming support is not avaialble for G711 */
-            if( (AUDIO_G711 == (_streamId & AUDIO_MASK) ) &&
-                (AUDIO_CODEC_TYPE_LPCM == _audioConfig->type) ) {
-	        if(force_audio_config) {
+	/* Enable audio only if type PCM as rdkc streaming support is not avaialble for G711 */
+	if( (AUDIO_G711 == (_streamId & AUDIO_MASK) ) &&
+		(AUDIO_CODEC_TYPE_LPCM == _audioConfig->type) ) {
+		if(force_audio_config) {
 			_audioConfig->enable = 1;
 			_audioConfig->sample_rate = SAMPLE_RATE_16K;
 		}
 
-                if (force_audio_config && recorder->SetAudioStreamConfig((((_streamId & AUDIO_MASK) & AUDIO_PCM) >> NIBBLE_LENGTH), _audioConfig) < 0) {
-                        FATAL("Error while enabling LPCM Audio using setAudioStreamConfig() for stream id 0x%x, switching to video only.", _streamId);
-                        INFO("Invoking stream init with stream 0x%x.", (_streamId & VIDEO_MASK));
-                        conf->KeyValue = (_streamId & VIDEO_MASK) + MAX_ENCODE_STREAM_NUM;
-                        av_flag = 1;
-                        recorder->StreamInit( conf, av_flag); // Video only
-                        _streamFd = recorder->getStreamHandler(av_flag);
-                }
-                else {
-                        INFO("setAudioStreamConfig for stream id 0x%x: Enable LPCM audio with 16k sample rate.", _streamId);
-                        INFO("Invoking stream init with stream 0x%x.", _streamId & VIDEO_MASK);
-                        conf->KeyValue = (_streamId & VIDEO_MASK) + MAX_ENCODE_STREAM_NUM;
-                        av_flag = 3;
-                        recorder->StreamInit( conf, av_flag); // Video only
-                        _streamFd = recorder->getStreamHandler(av_flag);
+		if (force_audio_config && recorder->SetAudioStreamConfig((((_streamId & AUDIO_MASK) & AUDIO_PCM) >> NIBBLE_LENGTH), _audioConfig) < 0) {
+			FATAL("Error while enabling LPCM Audio using setAudioStreamConfig() for stream id 0x%x, switching to video only.", _streamId);
+			INFO("Invoking stream init with stream 0x%x.", (_streamId & VIDEO_MASK));
+			conf->KeyValue = (_streamId & VIDEO_MASK) + MAX_ENCODE_STREAM_NUM;
+			av_flag = 1;
+			recorder->StreamInit( conf, av_flag); // Video only
+			_streamFd = recorder->getStreamHandler(av_flag);
+		}
+		else {
+			INFO("setAudioStreamConfig for stream id 0x%x: Enable LPCM audio with 16k sample rate.", _streamId);
+			INFO("Invoking stream init with stream 0x%x.", _streamId & VIDEO_MASK);
+			conf->KeyValue = (_streamId & VIDEO_MASK) + MAX_ENCODE_STREAM_NUM;
+			av_flag = 3;
+			recorder->StreamInit( conf, av_flag); // Video/Audio only
+			_streamFd = recorder->getStreamHandler(av_flag);
 
 			// Iniatilize SoxR
 			INFO("Initialize SoXR");
 			InitializeSoXR();
-                }
-            }
-            else {
-                FATAL("LPCM Audio not enabled _streamId 0x%x.", _streamId);
-                INFO("Invoking stream init with stream with stream 0x%x.", (_streamId & VIDEO_MASK));
-                conf->KeyValue = (_streamId & VIDEO_MASK) + MAX_ENCODE_STREAM_NUM;
-                av_flag = 1;
-                recorder->StreamInit( conf, av_flag); // Video only
-                _streamFd = recorder->getStreamHandler(av_flag);
-            }
+		}
+	}
+	else {
+		FATAL("LPCM Audio not enabled _streamId 0x%x.", _streamId);
+		INFO("Invoking stream init with stream with stream 0x%x.", (_streamId & VIDEO_MASK));
+		conf->KeyValue = (_streamId & VIDEO_MASK) + MAX_ENCODE_STREAM_NUM;
+		av_flag = 1;
+		recorder->StreamInit( conf, av_flag); // Video only
+		_streamFd = recorder->getStreamHandler(av_flag);
+	}
 #elif HAS_AAC
 	/* Enable audio only if type AAC */
-	    if( (AUDIO_AAC == (_streamId & AUDIO_MASK) ) &&
-	        (AUDIO_CODEC_TYPE_AAC == _audioConfig->type) ) {
+	if( (AUDIO_AAC == (_streamId & AUDIO_MASK) ) &&
+		(AUDIO_CODEC_TYPE_AAC == _audioConfig->type) ) {
 		_audioConfig->enable = 1;
 		_audioConfig->sample_rate = SAMPLE_RATE_16K;
 		if ( recorder->SetAudioStreamConfig(((_streamId & AUDIO_MASK) >> NIBBLE_LENGTH), _audioConfig) < 0) {
 			FATAL("Error while enabling AAC Audio using setAudioStreamConfig() for stream id 0x%x, switching to video only!!!", _streamId);
 			INFO("Invoking stream init with stream 0x%x!!!", (_streamId & VIDEO_MASK));
-                        conf->KeyValue = (_streamId & VIDEO_MASK) + MAX_ENCODE_STREAM_NUM;
-                        av_flag = 1;
-                        recorder->StreamInit( conf, av_flag); // Video only
-                        _streamFd = recorder->getStreamHandler(av_flag);
+			conf->KeyValue = (_streamId & VIDEO_MASK) + MAX_ENCODE_STREAM_NUM;
+			av_flag = 1;
+			recorder->StreamInit( conf, av_flag); // Video only
+			_streamFd = recorder->getStreamHandler(av_flag);
 		}
 		else {
 			INFO("setAudioStreamConfig  for stream id 0x%x: Enable AAC audio with 16k sample rate!!!\n", _streamId);
 			INFO("Invoking stream init with stream 0x%x!!!", _streamId);
-                        conf->KeyValue = _streamId + MAX_ENCODE_STREAM_NUM;
-                        av_flag = 3;
-                        recorder->StreamInit( conf, av_flag); // Video only
-                        _streamFd = recorder->getStreamHandler(av_flag);
+			conf->KeyValue = _streamId + MAX_ENCODE_STREAM_NUM;
+			av_flag = 3;
+			recorder->StreamInit( conf, av_flag); // Video only
+			_streamFd = recorder->getStreamHandler(av_flag);
 		}
 	    }
 	    else {
 	        FATAL("AAC Audio not enabled _streamId 0x%x!!!", _streamId);
 		INFO("Invoking stream init with stream with stream 0x%x!!!", (_streamId & VIDEO_MASK));
-                conf->KeyValue = (_streamId & VIDEO_MASK) + MAX_ENCODE_STREAM_NUM;
-                av_flag = 1;
-                recorder->StreamInit( conf, av_flag); // Video only
-                _streamFd = recorder->getStreamHandler(av_flag);
-	    }
+
+		conf->KeyValue = (_streamId & VIDEO_MASK) + MAX_ENCODE_STREAM_NUM;
+		av_flag = 1;
+		recorder->StreamInit( conf, av_flag); // Video only
+		_streamFd = recorder->getStreamHandler(av_flag);
+	}
 #endif
+#else //Below is for _HAS_XSTREAM_
+	memset(&_audioConfig, 0, sizeof (stream_hal_audio_config));
 
-	    // No need to initialize, we rely on the web admin page
-	    /*
-	    if (rdkc_stream_set_audio_config(_streamId, &_audioConfig) < 0) {
-		FATAL("rdkc_stream_set_audio_config error!");
-		return false;
-	    }
+	INFO("Invoking GetAudioStreamConfig");
+#ifdef HAS_G711
+	/* get audio configuration of LPCM */
+	if( objConsumer.GetAudioStreamConfig((((_streamId & AUDIO_MASK) & AUDIO_PCM) >> NIBBLE_LENGTH), &_audioConfig) < 0) {
+#elif HAS_AAC
+	if( objConsumer.GetAudioStreamConfig(((_streamId & AUDIO_MASK) >> NIBBLE_LENGTH), &_audioConfig) < 0) {
+#endif
+		WARN("GetAudioStreamConfig returned <0");
+	}
+	INFO("audio Stream ID=%" PRIu32, (((_streamId & AUDIO_MASK) & AUDIO_PCM) >> NIBBLE_LENGTH));
+	INFO("audio enable=%" PRIu32, _audioConfig.audio_enable_flag);
+	INFO("audio type=%" PRIu32, _audioConfig.stream_type);
+	INFO("audio samplerate=%" PRIu32, _audioConfig.sample_rate);
+	if((_audioConfig.audio_enable_flag != 1) || (_audioConfig.sample_rate != SAMPLE_RATE_8K)) {
+		force_audio_config =  true;
+		INFO("Need to enable the audio configuration forcefully");
+	}
 
-	    sleep(4); //TODO: if we have to sleep, we'll need to move this initialization to a thread
-	    */
+#ifdef HAS_G711
+	/* Enable audio only if type PCM as rdkc streaming support is not avaialble for G711 */
+	if( (AUDIO_G711 == (_streamId & AUDIO_MASK) ) &&
+		(X_AUDIO_CODEC_LPCM == _audioConfig.stream_type) ) {
+		if(force_audio_config) {
+			_audioConfig.audio_enable_flag = 1;
+			_audioConfig.sample_rate = SAMPLE_RATE_8K;
+		}
+		if (force_audio_config && objConsumer.SetAudioStreamConfig((((_streamId & AUDIO_MASK) & AUDIO_PCM) >> NIBBLE_LENGTH), &_audioConfig) < 0) {
+			FATAL("Error while enabling LPCM Audio using SetAudioStreamConfig() for stream id 0x%x, switching to video only.", _streamId);
+			INFO("Invoking StreamInit with stream 0x%x.", (_streamId & VIDEO_MASK));
 
-	    //INFO("Invoking rdkc_stream_init");
-	    //_streamFd = rdkc_stream_init(_streamId, 3); // Video AND Audio
-	    //_streamFd = rdkc_stream_init(_streamId, 3);
-	    if (_streamFd < 0) {
-		FATAL("stream init error: %" PRIi32"!", _streamFd);
+			av_flag = XSTREAM_VIDEO_FLAG;
+			_streamFd = objConsumer.StreamInit((_streamId & VIDEO_MASK), FORMAT_H264, av_flag);//Video only
+			if ( _streamFd < 0 ) {
+				FATAL("Invalid Sockfd _streamId 0x%x.", _streamId);
+			}
+		}
+		else {
+			INFO(" SetAudioStreamConfig for stream id 0x%x: Enable LPCM audio with 8k sample rate.", _streamId);
+			INFO("Invoking StreamInit with stream 0x%x.", _streamId & VIDEO_MASK);
+
+			av_flag = (XSTREAM_VIDEO_FLAG | XSTREAM_AUDIO_FLAG);
+			_streamFd = objConsumer.StreamInit((_streamId & VIDEO_MASK), FORMAT_H264, av_flag);//Video and Audio
+			if ( _streamFd < 0 ) {
+				FATAL("Invalid Sockfd _streamId 0x%x.", _streamId);
+			}
+#ifdef HAS_DOWNSAMPLE
+			// Iniatilize SoxR
+			INFO("Initialize SoXR");
+			InitializeSoXR();
+#endif
+		}
+	}
+	else {
+		FATAL("LPCM Audio not enabled _streamId 0x%x.", _streamId);
+		INFO("Invoking StreamInit with stream with stream 0x%x.", (_streamId & VIDEO_MASK));
+
+		av_flag = XSTREAM_VIDEO_FLAG;
+		_streamFd = objConsumer.StreamInit((_streamId & VIDEO_MASK), FORMAT_H264, av_flag);// Video only
+		if ( _streamFd < 0 ) {
+			FATAL("Invalid Sockfd _streamId 0x%x.", _streamId);
+		}
+	}
+
+#elif HAS_AAC
+	/* Enable audio only if type AAC */
+	if( (AUDIO_AAC == (_streamId & AUDIO_MASK) ) &&
+		(X_AUDIO_CODEC_AAC == _audioConfig.stream_type) ) {
+		_audioConfig.audio_enable_flag = 1;
+		_audioConfig.sample_rate = SAMPLE_RATE_8K;
+		if (objConsumer.SetAudioStreamConfig(((_streamId & AUDIO_MASK) >> NIBBLE_LENGTH), &_audioConfig) < 0) {
+			FATAL("Error while enabling AAC Audio using SetAudioStreamConfig() for stream id 0x%x, switching to video only!!!", _streamId);
+			INFO("Invoking StreamInit with stream 0x%x!!!", (_streamId & VIDEO_MASK));
+
+			av_flag = XSTREAM_VIDEO_FLAG;
+			_streamFd = objConsumer.StreamInit((_streamId & VIDEO_MASK), FORMAT_H264, av_flag);// Video only
+			if ( _streamFd < 0 ) {
+				FATAL("Invalid Sockfd _streamId 0x%x.", _streamId);
+			}
+		}
+		else {
+			INFO(" SetAudioStreamConfig for stream id 0x%x: Enable AAC audio with 8k sample rate!!!\n", _streamId);
+			INFO("Invoking StreamInit with stream 0x%x!!!", _streamId);
+
+			av_flag = ( XSTREAM_VIDEO_FLAG | XSTREAM_AUDIO_FLAG );
+			_streamFd = objConsumer.StreamInit(_streamId, FORMAT_H264, av_flag);//Video and Audio
+			if ( _streamFd < 0 ) {
+				FATAL("Invalid Sockfd _streamId 0x%x.", _streamId);
+			}
+		}
+	}
+	else {
+		FATAL("AAC Audio not enabled _streamId 0x%x!!!", _streamId);
+		INFO("Invoking StreamInit with stream with stream 0x%x!!!", (_streamId & VIDEO_MASK));
+
+		av_flag = XSTREAM_VIDEO_FLAG;
+		_streamFd = objConsumer.StreamInit((_streamId & VIDEO_MASK), FORMAT_H264, av_flag);// Video only
+		if ( _streamFd < 0 ) {
+			FATAL("Invalid Sockfd _streamId 0x%x.", _streamId);
+		}
+	}
+
+#endif
+	appFrameInfo = NULL;
+	appFrameInfo = objConsumer.GetH264FrameContainer();
+
+	if(NULL == appFrameInfo) {
+		FATAL(" GetH264FrameContainer error" );
 		EnqueueForDelete(); // do a clean-up in case of failure
 		return false;
-	    }
-	    INFO("stream init SUCCESS: %d" PRIi32, _streamFd);
+	}
+#endif //_HAS_XSTREAM_
+	// No need to initialize, we rely on the web admin page
+	/*
+	if (rdkc_stream_set_audio_config(_streamId, &_audioConfig) < 0) {
+		FATAL("rdkc_stream_set_audio_config error!");
+		return false;
+		}
+
+	sleep(4); //TODO: if we have to sleep, we'll need to move this initialization to a thread
+	*/
+
+	//INFO("Invoking rdkc_stream_init");
+	//_streamFd = rdkc_stream_init(_streamId, 3); // Video AND Audio
+	//_streamFd = rdkc_stream_init(_streamId, 3);
+
+	if (_streamFd < 0) {//TODO:
+		FATAL("StreamInit error: %" PRIi32"!", _streamFd);
+		EnqueueForDelete(); // do a clean-up in case of failure
+		return false;
+	}
+	INFO("StreamInit SUCCESS: %d" PRIi32, _streamFd);
 
 #if DUMP_G711
             g711Fd = fopen("/opt/g711.ulw", "a");
@@ -348,7 +490,11 @@ bool ApiProtocol::InitializeApi(Variant &config) {
 #ifdef HAS_G711
 	// Set audio config if LPCM
         if( (AUDIO_G711 == (_streamId & AUDIO_MASK) ) &&
+#ifdef _HAS_XSTREAM_
+            (X_AUDIO_CODEC_LPCM == _audioConfig.stream_type) ) {
+#else
             (AUDIO_CODEC_TYPE_LPCM == _audioConfig->type) ) {
+#endif //_HAS_XSTREAM_
                 if (!SetAudioConfig()) {
                         FATAL("G711 Audio config could not be set!");
                 }
@@ -356,101 +502,159 @@ bool ApiProtocol::InitializeApi(Variant &config) {
 #elif HAS_AAC
 	// Set audio config if AAC
 	if( (AUDIO_AAC == (_streamId & AUDIO_MASK) ) &&
+#ifdef _HAS_XSTREAM_
+            (X_AUDIO_CODEC_AAC == _audioConfig.stream_type) ) {
+#else
             (AUDIO_CODEC_TYPE_AAC == _audioConfig->type) ) {
+#endif //_HAS_XSTREAM_
 		if (!SetAudioConfig()) {
 			FATAL("AAC Audio config could not be set!");
 		}
 	}
 #endif
-
 	return true;
 }
 
 bool ApiProtocol::UpdateStreamConfig(Variant &config) {
 
 #if !defined ( RMS_PLATFORM_RPI )
-       if( is_gst_enabled != RDKC_SUCCESS )
-        {
-	    Variant videoConfig  = config["videoconfig"];
-            INFO("UpdateStreamConfig : API initialized with video config : %s", STR(videoConfig.ToString()));
+	if( is_gst_enabled != RDKC_SUCCESS ) 
+	{
 
-	    video_stream_config_t vidConfig;
-	    memset(&vidConfig, 0, sizeof (vidConfig));
+		Variant videoConfig  = config["videoconfig"];
+		INFO("UpdateStreamConfig : API initialized with video config : %s", STR(videoConfig.ToString()));
+#ifdef _HAS_XSTREAM_
+		stream_hal_stream_config vidConfig;
+		memset(&vidConfig, 0, sizeof (stream_hal_stream_config));
+#else //_HAS_XSTREAM_
+		video_stream_config_t vidConfig;
+		memset(&vidConfig, 0, sizeof (vidConfig));
+#endif
 
-            if (videoConfig.HasKeyChain(V_UINT32, true, 1, "stream_type")) {
-                INFO("UpdateStreamConfig : stream_type : Found in keychain");
-                vidConfig.stream_type = videoConfig["stream_type"];
-	    }else {
-                INFO("UpdateStreamConfig : stream_type : NOT FOUND in keychain");
-                vidConfig.stream_type = _videoConfig->stream_type;
-	    }
+    if (videoConfig.HasKeyChain(V_UINT32, true, 1, "stream_type")) {
+		INFO("UpdateStreamConfig : stream_type : Found in keychain");
+		vidConfig.stream_type = videoConfig["stream_type"];
+	}else {
+		INFO("UpdateStreamConfig : stream_type : NOT FOUND in keychain");
+#ifdef _HAS_XSTREAM_
+		vidConfig.stream_type = _videoConfig.stream_type;
+#else
+		vidConfig.stream_type = _videoConfig->stream_type;
+#endif //_HAS_XSTREAM_
+	}
 
-	    if (videoConfig.HasKeyChain(V_UINT32, true, 1, "width")) {
-                INFO("UpdateStreamConfig : width : Found in keychain");
-                vidConfig.width = videoConfig["width"];
-	    } else {
-                INFO("UpdateStreamConfig : width : NOT FOUND in keychain");
-                vidConfig.width = _videoConfig->width;
-	    }
+	if (videoConfig.HasKeyChain(V_UINT32, true, 1, "width")) {
+		INFO("UpdateStreamConfig : width : Found in keychain");
+		vidConfig.width = videoConfig["width"];
+	} else {
+		INFO("UpdateStreamConfig : width : NOT FOUND in keychain");
+#ifdef _HAS_XSTREAM_
+		vidConfig.width = _videoConfig.width;
+#else
+		vidConfig.width = _videoConfig->width;
+#endif //_HAS_XSTREAM_
+	}
 
-	    if (videoConfig.HasKeyChain(V_UINT32, true, 1, "height")) {
-                INFO("UpdateStreamConfig : height : Found in keychain");
-                vidConfig.height = videoConfig["height"];
-	    } else {
-                INFO("UpdateStreamConfig : height : NOT FOUND in keychain");
-                vidConfig.height = _videoConfig->height;
-	    }
+	if (videoConfig.HasKeyChain(V_UINT32, true, 1, "height")) {
+		INFO("UpdateStreamConfig : height : Found in keychain");
+		vidConfig.height = videoConfig["height"];
+	} else {
+		INFO("UpdateStreamConfig : height : NOT FOUND in keychain");
+#ifdef _HAS_XSTREAM_
+		vidConfig.height = _videoConfig.height;
+#else
+		vidConfig.height = _videoConfig->height;
+#endif //_HAS_XSTREAM_
+	}
 
-	    if (videoConfig.HasKeyChain(V_UINT32, true, 1, "frame_rate")) {
-                INFO("UpdateStreamConfig : frame_rate : Found in keychain");
-                vidConfig.frame_rate = videoConfig["frame_rate"];
-	    } else {
-                INFO("UpdateStreamConfig : frame_rate : NOT FOUND in keychain");
-                vidConfig.frame_rate = _videoConfig->frame_rate;
-	    }
+	if (videoConfig.HasKeyChain(V_UINT32, true, 1, "frame_rate")) {
+		INFO("UpdateStreamConfig : frame_rate : Found in keychain");
+		vidConfig.frame_rate = videoConfig["frame_rate"];
+	} else {
+		INFO("UpdateStreamConfig : frame_rate : NOT FOUND in keychain");
+#ifdef _HAS_XSTREAM_
+		vidConfig.frame_rate = _videoConfig.frame_rate;
+#else
+		vidConfig.frame_rate = _videoConfig->frame_rate;
+#endif //_HAS_XSTREAM_
+	}
 
-	    if (videoConfig.HasKeyChain(V_UINT32, true, 1, "gov_length")) {
-                INFO("UpdateStreamConfig : gov_length : Found in keychain");
-                vidConfig.gov_length = videoConfig["gov_length"];
-	    } else {
-                INFO("UpdateStreamConfig : gov_length : NOT FOUND in keychain");
-                vidConfig.gov_length = _videoConfig->gov_length;
-	    }
+	if (videoConfig.HasKeyChain(V_UINT32, true, 1, "gov_length")) {
+		INFO("UpdateStreamConfig : gov_length : Found in keychain");
+		vidConfig.gov_length = videoConfig["gov_length"];
+	} else {
+		INFO("UpdateStreamConfig : gov_length : NOT FOUND in keychain");
+#ifdef _HAS_XSTREAM_
+		vidConfig.gov_length = _videoConfig.gov_length;
+#else
+		vidConfig.gov_length = _videoConfig->gov_length;
+#endif //_HAS_XSTREAM_
+	}
 
-	    if (videoConfig.HasKeyChain(V_UINT32, true, 1, "profile")) {
-                INFO("UpdateStreamConfig : profile : Found in keychain");
-                vidConfig.profile = videoConfig["profile"];
-	    } else {
-                INFO("UpdateStreamConfig : profile : NOT FOUND in keychain");
-                vidConfig.profile = _videoConfig->profile;
-	    }
+	if (videoConfig.HasKeyChain(V_UINT32, true, 1, "profile")) {
+		INFO("UpdateStreamConfig : profile : Found in keychain");
+		vidConfig.profile = videoConfig["profile"];
+	} else {
+		INFO("UpdateStreamConfig : profile : NOT FOUND in keychain");
+#ifdef _HAS_XSTREAM_
+		vidConfig.profile = _videoConfig.profile;
+#else
+		vidConfig.profile = _videoConfig->profile;
+#endif //_HAS_XSTREAM_
+	}
 
-	    if (videoConfig.HasKeyChain(V_UINT32, true, 1, "quality_type")) {
-                INFO("UpdateStreamConfig : quality_type : Found in keychain");
-                vidConfig.quality_type = videoConfig["quality_type"];
-	    } else {
-                INFO("UpdateStreamConfig : quality_type : NOT FOUND in keychain");
-                vidConfig.quality_type = _videoConfig->quality_type;
-	    }
+	if (videoConfig.HasKeyChain(V_UINT32, true, 1, "quality_type")) {
+		INFO("UpdateStreamConfig : quality_type : Found in keychain");
+		vidConfig.quality_type = videoConfig["quality_type"];
+	} else {
+		INFO("UpdateStreamConfig : quality_type : NOT FOUND in keychain");
+#ifdef _HAS_XSTREAM_
+		vidConfig.quality_type = _videoConfig.quality_type;
+#else
+		vidConfig.quality_type = _videoConfig->quality_type;
+#endif //_HAS_XSTREAM_
+	}
 
-	    if (videoConfig.HasKeyChain(V_UINT32, true, 1, "quality_level")) {
-                INFO("UpdateStreamConfig : quality_level : Found in keychain");
-                vidConfig.quality_level = videoConfig["quality_level"];
-	    } else {
-                INFO("UpdateStreamConfig : quality_level : NOT FOUND in keychain");
-                vidConfig.quality_level = _videoConfig->quality_level;
-	    }
+	if (videoConfig.HasKeyChain(V_UINT32, true, 1, "quality_level")) {
+		INFO("UpdateStreamConfig : quality_level : Found in keychain");
+		vidConfig.quality_level = videoConfig["quality_level"];
+	} else {
+		INFO("UpdateStreamConfig : quality_level : NOT FOUND in keychain");
+#ifdef _HAS_XSTREAM_
+		vidConfig.quality_level = _videoConfig.quality_level;
+#else
+		vidConfig.quality_level = _videoConfig->quality_level;
+#endif //_HAS_XSTREAM_
+	}
 
-	    if (videoConfig.HasKeyChain(V_UINT32, true, 1, "bit_rate")) {
-                INFO("UpdateStreamConfig : bit_rate : Found in keychain");
-                vidConfig.bit_rate = videoConfig["bit_rate"];
-	    } else {
-                INFO("UpdateStreamConfig : bit_rate : NOT FOUND in keychain");
-                vidConfig.bit_rate = _videoConfig->bit_rate;
-	    }
+	if (videoConfig.HasKeyChain(V_UINT32, true, 1, "bit_rate")) {
+		INFO("UpdateStreamConfig : bit_rate : Found in keychain");
+		vidConfig.bit_rate = videoConfig["bit_rate"];
+	} else {
+		INFO("UpdateStreamConfig : bit_rate : NOT FOUND in keychain");
+#ifdef _HAS_XSTREAM_
+		vidConfig.bit_rate = _videoConfig.bit_rate;
+#else
+		vidConfig.bit_rate = _videoConfig->bit_rate;
+#endif //_HAS_XSTREAM_
+	}
 
-	    //check if stream set is required	
-	    if ( ( _videoConfig->stream_type == vidConfig.stream_type ) &&
+	//check if stream set is required
+#ifdef _HAS_XSTREAM_
+	if ( ( _videoConfig.stream_type == vidConfig.stream_type ) &&
+		( _videoConfig.width == vidConfig.width ) &&
+		( _videoConfig.height == vidConfig.height ) &&
+		( _videoConfig.frame_rate == vidConfig.frame_rate ) &&
+		( _videoConfig.gov_length == vidConfig.gov_length ) &&
+		( _videoConfig.profile == vidConfig.profile ) &&
+		( _videoConfig.quality_type == vidConfig.quality_type ) &&
+		( _videoConfig.quality_level == vidConfig.quality_level ) &&
+		( _videoConfig.bit_rate == vidConfig.bit_rate ) ) {
+		INFO("UpdateStreamConfig : config match found - Avoid set stream config call");
+	} else {
+		if (objConsumer.SetStreamConfig((_streamId & VIDEO_MASK), &vidConfig) < 0) {
+#else //_HAS_XSTREAM_
+	if ( ( _videoConfig->stream_type == vidConfig.stream_type ) &&
 		( _videoConfig->width == vidConfig.width ) &&
 		( _videoConfig->height == vidConfig.height ) &&
 		( _videoConfig->frame_rate == vidConfig.frame_rate ) &&
@@ -459,9 +663,10 @@ bool ApiProtocol::UpdateStreamConfig(Variant &config) {
 		( _videoConfig->quality_type == vidConfig.quality_type ) &&
 		( _videoConfig->quality_level == vidConfig.quality_level ) &&
 		( _videoConfig->bit_rate == vidConfig.bit_rate ) ) {
-		    INFO("UpdateStreamConfig : config match found - Avoid set stream config call");
-	    } else {
+		INFO("UpdateStreamConfig : config match found - Avoid set stream config call");
+	} else {
 		if (recorder->SetVideoStreamConfig((_streamId & VIDEO_MASK), &vidConfig) < 0) {
+#endif //_HAS_XSTREAM_
 			WARN("UpdateStreamConfig : start : Failed to set video configurations");
 			WARN("stream_type=%" PRIu32, vidConfig.stream_type);
 			WARN("width=%" PRIu32, vidConfig.width);
@@ -475,39 +680,46 @@ bool ApiProtocol::UpdateStreamConfig(Variant &config) {
 			WARN("UpdateStreamConfig : end : Failed to set video configurations");
 			return false;
 		}
-	    } 
+	}
 
-	    // Read again after the set command above
-	    memset(&vidConfig, 0, sizeof (vidConfig));
-	    if( recorder->GetVideoStreamConfig((_streamId & VIDEO_MASK), &vidConfig) < 0 ) {
-		WARN("UpdateStreamConfig : getVideoStreamConfig error !");
-	    }
+	// Read again after the set command above
+#ifdef _HAS_XSTREAM_
+		memset(&vidConfig, 0, sizeof (stream_hal_stream_config));
+		if( objConsumer.GetStreamConfig((_streamId & VIDEO_MASK), &vidConfig) < 0 ) {
+			WARN("UpdateStreamConfig : GetStreamConfig error !");
+	}
+#else //_HAS_XSTREAM_
+		memset(&vidConfig, 0, sizeof (vidConfig));
+		if( recorder->GetVideoStreamConfig((_streamId & VIDEO_MASK), &vidConfig) < 0 ) {
+			WARN("UpdateStreamConfig : getVideoStreamConfig error !");
+	}
+#endif //_HAS_XSTREAM_
 
-	    /* Below log line is part of US RDKC-3856 to have the Telemetry Marker for RMS Video Configuration
-		{ RMS Video Configurations- StreamType Width Height Bitrate Framerate GOVlen Profile QualityType QualityLevel: <StreamType>, <Width>, <Height>, 
-							<Birate>, <Framerate>, <GOVlen>, <profileID>, <QualityType>, <QualityLevel> }
-	    */
-	    INFO("RMS Video Configurations- StreamType Width Height Bitrate Framerate GOVlen Profile QualityType QualityLevel: %"PRIu16", %"PRIu32", %"PRIu32", %"PRIu32", %"PRIu32", %"PRIu32", %"PRIu32", %"PRIu32", %"PRIu32"", vidConfig.stream_type, vidConfig.width, vidConfig.height, vidConfig.bit_rate, vidConfig.frame_rate, vidConfig.gov_length, vidConfig.profile, vidConfig.quality_type, vidConfig.quality_level);
+		/* Below log line is part of US RDKC-3856 to have the Telemetry Marker for RMS Video Configuration
+			{ RMS Video Configurations- StreamType Width Height Bitrate Framerate GOVlen Profile QualityType QualityLevel: <StreamType>, <Width>, <Height>, 
+								<Birate>, <Framerate>, <GOVlen>, <profileID>, <QualityType>, <QualityLevel> }
+		*/
+		INFO("RMS Video Configurations- StreamType Width Height Bitrate Framerate GOVlen Profile QualityType QualityLevel: %"PRIu16", %"PRIu32", %"PRIu32", %"PRIu32", %"PRIu32", %"PRIu32", %"PRIu32", %"PRIu32", %"PRIu32"", vidConfig.stream_type, vidConfig.width, vidConfig.height, vidConfig.bit_rate, vidConfig.frame_rate, vidConfig.gov_length, vidConfig.profile, vidConfig.quality_type, vidConfig.quality_level);
 
-	    /*INFO("UpdateStreamConfig : Streaming started with below video configurations");
-	    INFO("stream_type=%" PRIu32, vidConfig.stream_type);
-	    INFO("width=%" PRIu32, vidConfig.width);
-	    INFO("height=%" PRIu32, vidConfig.height);
-	    INFO("frame_rate=%" PRIu32, vidConfig.frame_rate);
-	    INFO("gov_length=%" PRIu32, vidConfig.gov_length);
-	    INFO("profile=%" PRIu32, vidConfig.profile);
-	    INFO("quality_type=%" PRIu32, vidConfig.quality_type);
-	    INFO("quality_level=%" PRIu32, vidConfig.quality_level);
-	    INFO("bit_rate=%" PRIu32, vidConfig.bit_rate);*/
-       }
-       else
-       {
+		/*INFO("UpdateStreamConfig : Streaming started with below video configurations");
+		INFO("stream_type=%" PRIu32, vidConfig.stream_type);
+		INFO("width=%" PRIu32, vidConfig.width);
+		INFO("height=%" PRIu32, vidConfig.height);
+		INFO("frame_rate=%" PRIu32, vidConfig.frame_rate);
+		INFO("gov_length=%" PRIu32, vidConfig.gov_length);
+		INFO("profile=%" PRIu32, vidConfig.profile);
+		INFO("quality_type=%" PRIu32, vidConfig.quality_type);
+		INFO("quality_level=%" PRIu32, vidConfig.quality_level);
+		INFO("bit_rate=%" PRIu32, vidConfig.bit_rate);*/
+
+	}
+	else 
+	{
 #ifdef RMS_PLATFORM_RPI
-           // GST Set stream config here
+   // GST Set stream config here
 #endif
-       }
-
-#endif
+	}
+#endif //RMS_PLATFORM_RPI
 	return true;
 }
 
@@ -519,54 +731,64 @@ bool ApiProtocol::Terminate() {
 		delete pIoHandler;
 	}
 
-       if( is_gst_enabled != RDKC_SUCCESS )
-        {
+	if( is_gst_enabled != RDKC_SUCCESS )
+	{
 #ifndef SDK_DISABLED
-	    if (_streamFd > 0) {
-	        INFO("Invoking rdkc_stream_close");
-		if (recorder->StreamClose(av_flag) < 0) {
-			WARN("rdkc_stream_close failed!");
+	if (_streamFd > 0) {
+			INFO("Invoking StreamClose");
+		//Close connection
+#ifdef _HAS_XSTREAM_
+			if( 0 != objConsumer.StreamClose( _streamFd, av_flag )) {
+#else
+			if (recorder->StreamClose(av_flag) < 0) {
+#endif //_HAS_XSTREAM_
+				WARN("Stream Close failed!");
+			}
+			else {
+				INFO("Stream Close OK");
+			}
+			_streamFd = -1;
 		}
-		else {
-			INFO("rdkc_stream_close OK");
+
+#ifndef _HAS_XSTREAM_
+		if(_videoConfig) {
+			delete _videoConfig;
+			_videoConfig = NULL;
 		}
-	    }
 
-            if(_videoConfig) {
-                delete _videoConfig;
-                _videoConfig = NULL;
-            }
+		if(_audioConfig) {
+			delete _audioConfig;
+			_audioConfig = NULL;
+		}
+#endif //_HAS_XSTREAM_
 
-            if(_audioConfig) {
-                delete _audioConfig;
-                _audioConfig = NULL;
-            }
-
-	    // Clean up SoXR
-	    if(is_soxr_initialized && _soxr) {
-		INFO("Deleting SoxR _SoXR: %x is_soxr_initialized: %d", _soxr, is_soxr_initialized);
-		soxr_delete(_soxr);
-		_soxr = NULL;
-		is_soxr_initialized = false;
-	    }
+#ifdef HAS_DOWNSAMPLE
+		// Clean up SoXR
+		if(is_soxr_initialized && _soxr) {
+			INFO("Deleting SoxR _SoXR: %x is_soxr_initialized: %d", _soxr, is_soxr_initialized);
+			soxr_delete(_soxr);
+			_soxr = NULL;
+			is_soxr_initialized = false;
+		}
+#endif //HAS_DOWNSAMPLE
 
 #if DUMP_G711
-	    fclose(g711Fd);
+		fclose(g711Fd);
 #endif
 
 #if DUMP_PCM
-	    fclose(pcmFd);
+		fclose(pcmFd);
 #endif
 
 #endif /* SDK_DISABLED */
-       }
-       else
-       {
+	}
+	else
+	{
 #ifdef RMS_PLATFORM_RPI
-            INFO("Invoking gst_TerminateFrame AppNameVideo=%s, AppNameAudio=%s\n", GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO);
-            gst_TerminateFrame( GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO );
+		INFO("Invoking gst_TerminateFrame AppNameVideo=%s, AppNameAudio=%s\n", GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO);
+		gst_TerminateFrame( GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO );
 #endif
-       }
+	}
 	return true;
 }
 
@@ -584,18 +806,19 @@ bool ApiProtocol::FeedData() {
 	    size_t odone = 0;
 
 	    if( once ) {
-		string fileCheck( "/opt/.enable_rms_debug_logs" );
-		struct stat buffer;
-  		frameDebug = (stat(fileCheck.c_str(), &buffer) == 0);
-		once = false;
-	    }  
+			string fileCheck( "/opt/.enable_rms_debug_logs" );
+			struct stat buffer;
+			frameDebug = (stat(fileCheck.c_str(), &buffer) == 0);
+			once = false;
+	    }
 
-	    // Read the data from the API
-	    frame_info_t frame_info;
-	    static uint32_t invokecount(0);
-	    if( frameDebug && (invokecount++%30 == 0)) INFO("Invoking get stream");
-	        int retVal = recorder->GetStream(&frame_info,av_flag);
-	    if (retVal == 0) {
+	// Read the data from the API
+#ifndef _HAS_XSTREAM_
+	frame_info_t frame_info;
+	static uint32_t invokecount(0);
+	if( frameDebug && (invokecount++%30 == 0)) INFO("Invoking get stream");
+	int retVal = recorder->GetStream(&frame_info,av_flag);
+	if (retVal == 0) {
 		static uint32_t framecount(0);
 		if( frameDebug && (framecount++%30 == 0)) INFO("FRAME: type=%d, size=%d, pic_type=%d, frame_num=%d, width=%d, height=%d, timestamp=%d, arm_pts=%llu\n", frame_info.stream_type, frame_info.frame_size, frame_info.pic_type, frame_info.frame_num, frame_info.width, frame_info.height, frame_info.frame_timestamp, frame_info.arm_pts);
 
@@ -606,10 +829,9 @@ bool ApiProtocol::FeedData() {
 		} else if ((frame_info.stream_type == 3) || (frame_info.stream_type == 10)) {
 			header = 0x01; // audio frame
 #ifdef HAS_G711
-			if(frame_info.stream_type == 3)
-                        {
+			if(frame_info.stream_type == 3) {
 
-                                int16_t *pcmPtr = (int16_t *) frame_info.frame_ptr;
+				int16_t *pcmPtr = (int16_t *) frame_info.frame_ptr;
 
 				// Downsample the PCM audio to 8k
 				if(is_soxr_initialized && _soxr) {
@@ -636,14 +858,88 @@ bool ApiProtocol::FeedData() {
 				_outputBuffer.ReadFromU64(((uint64_t)frame_info.frame_timestamp * 1000), true);
 
 				// g711 encoding
-                                for(uint32_t i = 0; i < odone; ++i)
-                                {
-                                        //g711Ptr[i] = linear_to_ulaw(g711Ptr[i]);
+				for(uint32_t i = 0; i < odone; ++i) {
+					//g711Ptr[i] = linear_to_ulaw(g711Ptr[i]);
 					_outputBuffer.ReadFromByte(linear_to_ulaw(pcmPtr[i]));
 #if DUMP_G711
 					g711Data[i] = linear_to_ulaw(pcmPtr[i]);
 #endif
-                                }
+				}
+#if DUMP_G711
+				fwrite((uint8_t *)g711Data, odone, 1, g711Fd);
+#endif
+#endif
+				}
+		} else {
+			WARN("Not supported stream type: %" PRIu8, header);
+			return true;
+		}
+
+		if ((frame_info.stream_type == 1) || (frame_info.stream_type == 10)) {
+			// Form the header and actual payload
+			uint32_t length = frame_info.frame_size + 9; // length is frame size + header and timestamp
+			_outputBuffer.ReadFromU32(length, true); // set the payload length
+			_outputBuffer.ReadFromByte(header); // payload type header
+			_outputBuffer.ReadFromU64(((uint64_t)frame_info.frame_timestamp * 1000), true);
+			_outputBuffer.ReadFromBuffer((uint8_t *) frame_info.frame_ptr, frame_info.frame_size);
+		}
+#else //_HAS_XSTREAM_
+	static uint32_t invokecount(0);
+
+	if( frameDebug && (invokecount++%30 == 0)) INFO("Invoking GetFrame");
+	int retVal = objConsumer.ReadFrame( _streamId, FORMAT_H264, appFrameInfo);
+	uint8_t header = 0x00;
+	if (0 == retVal ) {
+		static uint32_t framecount(0);
+		if( frameDebug && (framecount++%30 == 0)) INFO("FRAME: type=%d, size=%d, pic_type=%d, frame_num=%d, width=%d, height=%d, timestamp=%ld, arm_pts=%llu\n", appFrameInfo->stream_type, appFrameInfo->frame_size, appFrameInfo->pic_type, appFrameInfo->frame_num, appFrameInfo->width, appFrameInfo->height, appFrameInfo->frame_timestamp, appFrameInfo->arm_pts);
+
+		// Set the header as payload type (0x00)
+		if (appFrameInfo->stream_type == 1) {
+			// h264 frame, header is as-is
+		} else if ((appFrameInfo->stream_type == 3) || (appFrameInfo->stream_type == 10)) {
+			header = 0x01; // audio frame
+#ifdef HAS_G711
+			if(appFrameInfo->stream_type == 3) {
+
+				int16_t *pcmPtr = (int16_t *) appFrameInfo->frame_ptr;
+
+#ifdef HAS_DOWNSAMPLE
+				// Downsample the PCM audio to 8k
+				if(is_soxr_initialized && _soxr) {
+					error = soxr_process(_soxr, (void *)pcmPtr, appFrameInfo->frame_size/2, NULL, (void *)pcmPtr, appFrameInfo->frame_size/4, &odone);
+					//INFO("Downsampling PCM from 16k to 8K frame size %d odone %d ", appFrameInfo->frame_size, odone);
+				}
+#else
+				odone = appFrameInfo->frame_size/2;
+#endif
+
+#if DUMP_PCM
+				fwrite((uint8_t *)pcmPtr, odone*osize, 1, pcmFd);
+#endif
+
+#if DUMP_G711
+				uint8_t *g711Data = (uint8_t *) malloc(odone);
+				memset(g711Data, 0, odone);
+#endif
+				if(odone <= 0) {
+					INFO("Resampled audio is not available");
+					return true;
+				}
+
+				// Form the header and actual payload
+				uint32_t length = odone + 9; // length is (frame size)/2 + header and timestamp
+				_outputBuffer.ReadFromU32(length, true); // set the payload length
+				_outputBuffer.ReadFromByte(header); // payload type header
+				_outputBuffer.ReadFromU64(((uint64_t)appFrameInfo->frame_timestamp * 1000), true);
+
+				// g711 encoding
+				for(uint32_t i = 0; i < odone; ++i) {
+					//g711Ptr[i] = linear_to_ulaw(g711Ptr[i]);
+					_outputBuffer.ReadFromByte(linear_to_ulaw(pcmPtr[i]));
+#if DUMP_G711
+					g711Data[i] = linear_to_ulaw(pcmPtr[i]);
+#endif
+				}
 #if DUMP_G711
 				fwrite((uint8_t *)g711Data, odone, 1, g711Fd);
 #endif
@@ -654,15 +950,15 @@ bool ApiProtocol::FeedData() {
 			return true;
 		}
 
-		if ((frame_info.stream_type == 1) || (frame_info.stream_type == 10)) {
-		// Form the header and actual payload
-			uint32_t length = frame_info.frame_size + 9; // length is frame size + header and timestamp
+		if ((appFrameInfo->stream_type == 1) || (appFrameInfo->stream_type == 10)) {
+			// Form the header and actual payload
+			uint32_t length = appFrameInfo->frame_size + 9; // length is frame size + header and timestamp
 			_outputBuffer.ReadFromU32(length, true); // set the payload length
 			_outputBuffer.ReadFromByte(header); // payload type header
-			_outputBuffer.ReadFromU64(((uint64_t)frame_info.frame_timestamp * 1000), true);
-			_outputBuffer.ReadFromBuffer((uint8_t *) frame_info.frame_ptr, frame_info.frame_size);
+			 _outputBuffer.ReadFromU64(((uint64_t)appFrameInfo->frame_timestamp * 1000), true);
+			_outputBuffer.ReadFromBuffer(appFrameInfo->frame_ptr, appFrameInfo->frame_size);
 		}
-
+#endif //_HAS_XSTREAM_
 		// Pass the data to the upper protocol
 		return _pNearProtocol->SignalInputData(_outputBuffer);
 	    } else if (retVal == 1) {

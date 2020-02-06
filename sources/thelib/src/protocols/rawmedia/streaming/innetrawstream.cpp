@@ -163,11 +163,15 @@ bool InNetRawStream::FeedVideoData(uint8_t *pData, uint32_t dataLength, double t
 				break;
 			case NALU_TYPE_IDR:
 			case NALU_TYPE_SLICE:
+#ifndef _HAS_XSTREAM_
 			case NALU_TYPE_SEI:
+#endif
 				FeedVideoFrame(begin, naluLength, ts);
 				break;
 			default:
+#ifndef _HAS_XSTREAM_
 				WARN("Unsupported NAL unit: %"PRIu8" (ignored)", type);
+#endif
 				break;
 		}
 		

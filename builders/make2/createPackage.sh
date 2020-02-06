@@ -34,40 +34,40 @@ RELEASE_NUMBER=`cat $ROOT_FOLDER/RELEASE_NUMBER`.`git rev-list --count HEAD`
 DIST_NAME="rdkcms-$RELEASE_NUMBER-$ARCH-${DISTRO_NAME}_${DISTRO_VERSION}"
 
 BUILD_SSL=$3
-        if [ "$BUILD_SSL" != "ssl" ]
-        then
-                BUILD_SSL=$1
-                if [ "$BUILD_SSL" != "ssl" ]
-                then
-                        BUILD_SSL=$2
-                        if [ "$BUILD_SSL" != "ssl" ]
-                        then
-                                BUILD_SSL=$3
-                                if [ "$BUILD_SSL" != "ssl" ]
-                                then
-                                        BUILD_SSL="no"
-                                fi
-                        fi
-                fi
-        fi
+if [ "$BUILD_SSL" != "ssl" ]
+then
+	BUILD_SSL=$1
+	if [ "$BUILD_SSL" != "ssl" ]
+	then
+		BUILD_SSL=$2
+		if [ "$BUILD_SSL" != "ssl" ]
+		then
+			BUILD_SSL=$3
+			if [ "$BUILD_SSL" != "ssl" ]
+			then
+				BUILD_SSL="no"
+			fi
+		fi
+	fi
+fi
 
 DO_CLEANUP=$3
+if [ "$DO_CLEANUP" != "yes" ]
+then
+        DO_CLEANUP=$1
         if [ "$DO_CLEANUP" != "yes" ]
         then
-                DO_CLEANUP=$1
+                DO_CLEANUP=$2
                 if [ "$DO_CLEANUP" != "yes" ]
                 then
-                        DO_CLEANUP=$2
+                        DO_CLEANUP=$3
                         if [ "$DO_CLEANUP" != "yes" ]
                         then
-                                DO_CLEANUP=$3
-                                if [ "$DO_CLEANUP" != "yes" ]
-                                then
-                                        DO_CLEANUP="no"
-                                fi
+                                DO_CLEANUP="no"
                         fi
                 fi
         fi
+fi
 
 echo "----------Summary------------"
 echo "RELEASE_NUMBER: $RELEASE_NUMBER"
@@ -82,19 +82,19 @@ echo "-----------------------------"
 
 
 # 1. compile the binary
-    if [ "$DO_CLEANUP" = "yes" ]
-    then
-        (
-            cd $ROOT_FOLDER/builders/make2 && \
-            sh crossmake.sh clean
-        )
-        testError "cleanup before compile failed";
-    fi
-    (
-        cd $ROOT_FOLDER/builders/make2 && 
-        sh crossmake.sh $1
-    )
-    testError "compiling failed"
+if [ "$DO_CLEANUP" = "yes" ]
+then
+	(
+		cd $ROOT_FOLDER/builders/make2 && \
+		sh crossmake.sh clean
+	)
+	testError "cleanup before compile failed";
+fi
+(
+	cd $ROOT_FOLDER/builders/make2 && 
+	sh crossmake.sh $1
+)
+testError "compiling failed"
 
 # 2. Perform the tests
 #    Cant when cross compiling
@@ -167,8 +167,16 @@ testError "chmod +x ./dist/$DIST_NAME/bin/rmsTranscoder.sh"
 BUILD_INFO="./dist/$DIST_NAME/BUILD_INFO"
 echo "buildDate: `date`" > $BUILD_INFO
 echo "version: $RELEASE_NUMBER" >> $BUILD_INFO
+echo "PLATFORM_BREAKPAD_BINARY: $PLATFORM_BREAKPAD_BINARY"
 
-
+if [ "$XCAM_MODEL" != "XHB1" ]; then
+	#generate debug symbols
+	if [ -f $PLATFORM_BREAKPAD_BINARY ]; then
+		$PLATFORM_BREAKPAD_BINARY ./dist/$DIST_NAME/bin/rdkcms_debug > ./evostreamms.sym
+		mv -f ./evostreamms.sym  $PLATFORM_SYMBOL_PATH
+		echo "evostream debug symbol created"
+	fi
+fi
 
 # 5. cleanup things
 removeSvnFiles ./dist/$DIST_NAME
