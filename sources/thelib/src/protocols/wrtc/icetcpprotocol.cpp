@@ -171,8 +171,6 @@ bool IceTcpProtocol::SignalInputData(IOBuffer &buffer) {
 //#endif
 
 			int err = pMsg->GetErrorCodeAttr();
-			INFO("[ICE-TCP] StunMsg parsed type: 0x%x, bytes %d, error code %d",
-					type, pMsg->GetMessageLen(), err); //
 			HandleServerMsg(pMsg, type, err, buffer);
 
 			// Skip the complete message
