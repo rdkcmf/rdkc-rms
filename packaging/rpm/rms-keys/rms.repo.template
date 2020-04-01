@@ -1,0 +1,5 @@
+[RMS_PACKAGE]
+name=Your Repository
+baseurl=http://yum.insertdomainhere.com/__MACHINE__
+enabled=1
+gpgkey=http://yum.insertdomainhere.com/example.gpg.key

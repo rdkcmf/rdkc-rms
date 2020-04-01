@@ -1,0 +1,45 @@
+##########################################################################
+# If not stated otherwise in this file or this component's LICENSE
+# file the following copyright and licenses apply:
+#
+# Copyright 2019 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#########################################################################RTMP PULL RAMP TEST
+
+DESCRIPTION
+This test uses a client to pull multiple streams from a server.
+Statistics are gathered at the server while the client ramps up/down the number of streams.
+
+PREPARATION
+This part is only required if no RTMP files have been prepared before.
+Please refer to the preparation steps in prep-rtmp.txt.
+
+USAGE
+--SERVER SIDE--
+a1. If the RMS is not running, start it.
+a2. Run pullscript.rb.
+a3. Press [7] to list config.
+a4. Press [8] to remove config entries.
+a5. Repeat step a4 until all config entries are removed.
+a6. Press [1] to pull 1 stream.
+a7. Press [C] to start capturing statistics.
+a8. Wait for at least 3 lines of statistics.
+--CLIENT SIDE--
+b1. Run pullscript.rb.
+b2. Press [3] to start ramping.
+b3. Wait for ramp up and ramp down to finish.
+b4. Press [X] to exit.
+--SERVER SIDE--
+c1. Wait for the client to finish ramping down.
+c2. Press [X] to exit.

@@ -1,0 +1,22 @@
+#!/bin/sh
+
+export TOOLCHAIN_BASE="/disk2/opt/liquidimage_mips_11/mips-2014.05"
+export TOOLCHAIN_PREFIX="/bin/mips-linux-gnu-"
+export FULL_TOOLCHAIN=$TOOLCHAIN_BASE/$TOOLCHAIN_PREFIX
+
+LIB_DIR=/disk2/opt/liquidimage_mips_11/mips-2014.05/mips-linux-gnu/libc/el/lib/
+
+TARGET_OS_NAME=Linux
+TARGET_OS_VERSION=mipselLinux
+TARGET_OS_ARCH=mipsel
+TARGET_OS_UNAME="MIPSEL GNU/Linux"
+
+export PLATFORM_INCLUDE="-I$TOOLCHAIN_BASE/include"
+export PLATFORM_LIBS="-L$TOOLCHAIN_BASE/lib -L$LIB_DIR -lssl -lcrypto -ldl -lrt -L./ -lvmf -lpthread -ldl"
+export PLATFORM_DEFINES=" -DLINUX -DLITTLE_ENDIAN_BYTE_ALIGNED -DNET_EPOLL -DGLOBALLY_ACCOUNT_BYTES"
+#export PLATFROM_COMPILE_SWITCHES="-static -shared-libgcc -O3 -fno-builtin -fdata-sections -ffunction-sections -EL"
+export PLATFROM_COMPILE_SWITCHES="-static-libstdc++ -static-libgcc -O3 -Wall -g -fmessage-length=0 -pthread -fcommon -MMD -MP -EL -mhard-float -mno-micromips -mno-mips16"
+export PLATFROM_LINK_SWITCHES="-static -EL "
+export STRIP_PARAMS="-s -g -S -d --strip-unneeded"
+
+make -f vmf-compile.mk

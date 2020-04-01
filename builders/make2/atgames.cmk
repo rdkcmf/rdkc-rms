@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#Set all the build parameters
+TOOLCHAIN_DIR=/disk2/opt/atgames2/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/
+TOOLCHAIN_PREFIX=/bin/arm-linux-gnueabihf-
+
+BIND_ID=65
+SSL_ARCH=linux-armv4
+TARGET_OS_NAME=ArmLinux
+TARGET_OS_VERSION=GNUeabi
+TARGET_OS_ARCH=armv6l
+TARGET_OS_UNAME="Linux localhost 3.6.11+ 371 PREEMPT Thu Feb 7 16:31:35 GMT 2013 armv6l GNU/Linux"
+
+export PLATFORM_INCLUDE="-I$TOOLCHAIN_DIR/include"
+export PLATFORM_LIBS="-L$TOOLCHAIN_DIR/lib -lssl -lcrypto -ldl -lrt "
+export PLATFORM_DEFINES=" -DLINUX -DLITTLE_ENDIAN_BYTE_ALIGNED -DNET_EPOLL -DGLOBALLY_ACCOUNT_BYTES"
+export PLATFROM_COMPILE_SWITCHES="-O3 -fdata-sections -ffunction-sections "
+export PLATFROM_LINK_SWITCHES="-Wl,--gc-sections "
+export STRIP_PARAMS="-s -g -S -d --strip-unneeded"
+

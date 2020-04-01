@@ -1,0 +1,45 @@
+Copyright 2018 RDK Management
+Licensed under the Apache License, Version 2.0 
+
+Copyright (c) 2007-2016 Kevin van Zonneveld (https://kvz.io) and Contributors (https://locutus.io/authors)
+Licensed under the MIT license
+
+Copyright (c) 1995, 1999
+Berkeley Software Design, Inc.  All rights reserved.
+Licensed under the BSD-1 license
+
+Copyright (c) 2013, Kenneth MacKay
+All rights reserved.
+Licensed under the BSD-2 license
+
+Extracts from RFC3550 are Copyright (C) The Internet Society (2003). 
+All Rights Reserved.
+
+Copyright (c) 2005 Pascal Gloor <pascal.gloor@spale.com>
+Licensed under the BSD-3 license
+
+Copyright (c) 1998 Kungliga Tekniska Hogskolan
+(Royal Institute of Technology, Stockholm, Sweden)
+Licensed under the BSD-3 license
+
+material from OpenSSL Project
+Copyright 2016-2017 The OpenSSL Project Authors. All Rights Reserved.
+Licensed under the OpenSSL license.
+
+Material from RFC3526 is:
+Copyright (C) The Internet Society (2003). All Rights Reserved.
+
+Copyright (C) 2001 Steve Underwood
+code placed in the public domain for the benefit of all mankind
+
+Modifications for WebRtc, 2011/04/28, by tlegrand
+Copyright (c) 2011, The WebRTC project authors. All rights reserved.
+Licensed under the BSD-3 license
+
+luaunit is Copyright (c) 2005-2018, Philippe Fremy <phil at freehackers dot org>
+Development by Philippe Fremy <phil@freehackers.org>
+Based on initial work of Ryu, Gwang (http://www.gpgstudy.com/gpgiki/LuaUnit)
+Licensed under the BSD-2 license
+=======
+Copyright (C) 2001 Steve Underwood
+code placed in the public domain for the benefit of all mankind

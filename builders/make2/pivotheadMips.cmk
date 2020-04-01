@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#Set all the build parameters
+TOOLCHAIN_DIR=/disk2/opt/OpenWrt-Toolchain-ar71xx-for-mips_r2-gcc-4.6-linaro_uClibc-0.9.33.2/toolchain-mips_r2_gcc-4.6-linaro_uClibc-0.9.33.2/
+TOOLCHAIN_PREFIX=/bin/mips-openwrt-linux-
+
+SSL_ARCH=linux-mipsel
+BIND_ID=71
+TARGET_OS_NAME=Linux
+TARGET_OS_VERSION=OpwnWrtmipsar71
+TARGET_OS_ARCH=OpwnWrtMIPS
+TARGET_OS_UNAME="Linaro 4.6 Linux"
+
+export PLATFORM_INCLUDE="-I$TOOLCHAIN_DIR/include"
+export PLATFORM_LIBS="-L$TOOLCHAIN_DIR/lib -lssl -lcrypto -ldl -lpthread "
+export PLATFORM_DEFINES=" -DLINUX -DBIG_ENDIAN_BYTE_ALIGNED -DNET_EPOLL -DGLOBALLY_ACCOUNT_BYTES"
+export PLATFORM_DEFINES=" -DNO_SPAWN -DLINUX -DBIG_ENDIAN_BYTE_ALIGNED -DNET_EPOLL -DGLOBALLY_ACCOUNT_BYTES"
+export PLATFROM_COMPILE_SWITCHES="-O3 -fdata-sections -ffunction-sections "
+export PLATFROM_LINK_SWITCHES="-Wl,--gc-sections "
+export STRIP_PARAMS="-s -g -S -d --strip-unneeded"
+

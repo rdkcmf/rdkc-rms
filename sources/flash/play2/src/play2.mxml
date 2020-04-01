@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   width="955" height="760" minWidth="955" minHeight="760">
+	<fx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			private var _nc:NetConnection=null;
+			private var _ns:NetStream=null;
+			private var _video:Video=null;
+			private var _timer:Object = setInterval(timerTriggered, 250);
+			
+			[Bindable]
+			private var _playbackScenario:ArrayCollection = new ArrayCollection([
+				{streamName: "test1",start: -1,length:10,reset:null},
+				{streamName: "mp4:superMisto.mp4",start: 0,length:10,reset:false},
+				{streamName: "test1",start: -1,length:10,reset:false},
+			]);
+			
+			private function addLog(s:String):void{
+				txtLogs1.text+=s+"\n";
+				txtLogs1.validateNow();
+				txtLogs1.scroller.verticalScrollBar.value = txtLogs1.scroller.verticalScrollBar.maximum;
+			}
+			
+			private function timerTriggered():void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null)){
+					//lblStats.text="Head: 0 / 0; Buffer: 0 / 0 / 0 / 0";
+					lblHead.text="Head: 0 / 0";
+					lblBuffer.text="Buffer: 0 / 0";
+					lblPauseBuffer.text="Pause buffer: 0 / 0";
+					return;
+				}
+				//lblStats.text="Head: "+_ns.time+" / "+(_ns.time+_ns.bufferLength)+"; Buffer: "+_ns.bufferLength+" / "+_ns.bufferTime+" / "+_ns.bufferTimeMax+" / "+_ns.maxPauseBufferTime;
+				lblHead.text="Head: "+_ns.time.toFixed(3)+" / "+(_ns.time+_ns.bufferLength).toFixed(3);
+				lblBuffer.text="Buffer: "+_ns.bufferLength.toFixed(3)+" / "+_ns.bufferTime.toFixed(3);
+				lblPauseBuffer.text="Pause buffer: "+_ns.bufferLength.toFixed(3)+" / "+_ns.maxPauseBufferTime.toFixed(3);
+			}
+			
+			private function connectRMS():void{
+				txtConnString.text="rtmp://localhost/live";
+				connect();
+			}
+			
+			private function connectAdobe():void{
+				txtConnString.text="rtmp://localhost:1937/live";
+				connect();
+			}
+			
+			private function connect():void{
+				if(_nc!=null){
+					_nc.close();
+					_nc=null;
+				}
+	
+				_nc=new NetConnection();
+				_nc.addEventListener(NetStatusEvent.NET_STATUS,connectionStatus);
+				_nc.connect(txtConnString.text);
+			}
+			
+			private function connectionStatus(evt:NetStatusEvent):void{
+				addLog("CONNECTION: "+evt.info.level+": "+evt.info.code);
+				if(evt.info.code=="NetConnection.Connect.Success"){
+					if(_video==null){
+						_video=new Video(uicVideoContaner.width,uicVideoContaner.height);
+						uicVideoContaner.addChild(_video);
+					}else{
+						_video.clear();
+					}
+					_ns=new NetStream(_nc);
+					_ns.addEventListener(NetStatusEvent.NET_STATUS,streamStatus1);
+					_ns.addEventListener(NetDataEvent.MEDIA_TYPE_DATA,streamStatus2);
+					_video.attachNetStream(_ns);
+				}
+			}
+			
+			private function play():void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.bufferTime=new Number(txtBufferTime.text);
+				_ns.bufferTimeMax=new Number(txtBufferTimeMax.text);
+				_ns.maxPauseBufferTime=new Number(txtMaxPauseBufferTime.text);
+				validate();
+				for each (var i:Object in _playbackScenario){
+					if((i.start!=null)&&(i.length!=null)&&(i.reset!=null))
+						_ns.play(i.streamName,i.start,i.length,i.reset);
+					else if((i.start!=null)&&(i.length!=null))
+						_ns.play(i.streamName,i.start,i.length);
+					else if((i.start!=null))
+						_ns.play(i.streamName,i.start);
+					else
+						_ns.play(i.streamName);
+				}
+			}
+			
+			private function playSpecial(o:Object):void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.play(o);
+			}
+			
+			private function appendNewItem(s:Object):void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.play(s,100,10,false);
+			}
+			
+			private function streamStatus1(evt:NetStatusEvent):void{
+				addLog("STREAM: "+evt.info.level+":"+evt.info.code);
+				switch(evt.info.code){
+					case "NetStream.Play.StreamNotFound":
+						break;
+					default:
+						break;
+				}
+			}
+			
+			private function streamStatus2(evt:NetDataEvent):void{
+				addLog("STREAM: "+evt.info.handler);
+			}
+			
+			private function seek():void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.seek(new Number(txtSeek.text));
+			}
+			
+			private function pause():void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.pause();
+			}
+			
+			private function resume():void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.resume();
+			}
+			
+			private function togglePause():void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.togglePause();
+			}
+			
+			private function stop():void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.close();
+				_ns=null;
+			}
+			
+			private function setBufferTime():void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.bufferTime=new Number(txtBufferTime.text);
+			}
+			
+			private function setBufferTimeMax():void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.bufferTimeMax=new Number(txtBufferTimeMax.text);
+			}
+			
+			private function setMaxPauseBufferTime():void{
+				if((_nc==null)||(!_nc.connected)||(_ns==null))
+					return;
+				_ns.maxPauseBufferTime=new Number(txtMaxPauseBufferTime.text);
+			}
+			
+			private function addItem():void{
+				_playbackScenario.addItem({streamName: "#editme",start: null,length:null,reset:null});
+			}
+			
+			private function removeItem():void{
+				var backup:Number=grdPlaybackScenario.selectedIndex;
+				_playbackScenario.removeItemAt(grdPlaybackScenario.selectedIndex);
+				if(backup>=_playbackScenario.length)
+					backup=_playbackScenario.length-1;
+				grdPlaybackScenario.setSelectedIndex(backup);
+			}
+			
+			private function gapless():void{
+				_playbackScenario.removeAll();
+				var i:Number=0;
+				var max:Number=new Number(txtDuration.text);
+				var step:Number=new Number(txtStep.text);
+				for(i=0;i<max;i+=step){
+					_playbackScenario.addItem({streamName: txtFileName.text,start: i,length:step,reset:i==0?null:false});
+					//_playbackScenario.addItem({streamName: "mp3:Spit - no tag",start: 530+i,length:1,reset:i==0?null:false});
+					//_playbackScenario.addItem({streamName: "mp4:tbs.mp4",start: 1000+i,length:1,reset:i==0?null:false});
+				}
+			}
+			
+			private function fullScreen():void{
+				var screenRectangle:Rectangle = new Rectangle(_video.x, _video.y, _video.width, _video.height); 
+				stage.fullScreenSourceRect = screenRectangle; 
+				stage.displayState = StageDisplayState.FULL_SCREEN; 
+			}
+			
+			private function clear():void{
+				_playbackScenario.removeAll();
+			}
+			
+			private function validate():void{
+				var temp:ArrayCollection = new ArrayCollection();
+				for each (var i:Object in _playbackScenario) 
+				{
+					if((i.streamName==null)||(i.streamName=="")||((i.streamName as String).substr(0,1)=='#'))
+						continue;
+					if(i.start==null)
+					{
+						i.length=null;
+						i.reset=null;
+					}
+					if(i.length==null)
+					{
+						i.reset=null;
+					}
+					temp.addItem(i);
+				}
+				_playbackScenario=temp;
+			}
+		]]>
+	</fx:Script>
+	<mx:VBox width="100%" height="100%" horizontalAlign="center" verticalAlign="middle">
+		<mx:HBox width="100%">
+			<mx:Label text="Connect URI:"/>
+			<s:TextInput id="txtConnString" width="100%" text="rtmp://localhost/live"/>
+			<s:Button id="btnConnectRMS" label="RMS" click="connectRMS();"/>
+			<s:Button id="btnConnectAdobe" label="Adobe" click="connectAdobe();"/>
+			<s:Button id="btnConnect" label="Connect" click="connect();"/>
+		</mx:HBox>
+		<mx:HBox width="100%" height="100%">
+			<mx:UIComponent id="uicVideoContaner" width="640" height="480"/>
+			<mx:VBox width="100%">
+				<s:Label id="lblHead"/>
+				<s:Label id="lblBuffer"/>
+				<s:Label id="lblPauseBuffer"/>
+				<mx:VBox width="100%">
+					<mx:HBox width="100%" verticalAlign="middle"><s:Label width="60" text="File name:"/><s:TextInput id="txtFileName" text="mp4:superMisto.mp4" /></mx:HBox>
+					<mx:HBox width="100%" verticalAlign="middle"><s:Label width="60" text="Duration:"/><s:TextInput id="txtDuration" text="100" /></mx:HBox>
+					<mx:HBox width="100%" verticalAlign="middle"><s:Label width="60" text="Step:"/><s:TextInput id="txtStep" text="1" /></mx:HBox>
+					<mx:HBox width="100%" verticalAlign="middle"><s:Button label="Gapless" click="gapless()"/> <s:Button label="Full screen" click="fullScreen()"/></mx:HBox>
+				</mx:VBox>
+				<mx:HBox width="100%">
+					<s:Button label="Add" click="addItem()"/>
+					<s:Button label="Remove" click="removeItem()"/>
+					<s:Button label="Clear" click="clear()"/>
+				</mx:HBox>
+				<s:DataGrid id="grdPlaybackScenario" width="100%" dataProvider="{_playbackScenario}"
+							editable="true" gridItemEditorSessionSave="validate()">
+					<s:columns>
+						<s:ArrayList>
+							<s:GridColumn dataField="streamName" headerText="Stream Name"/>
+							<s:GridColumn dataField="start" headerText="Start">
+								<s:itemEditor>
+									<fx:Component>
+										<s:DefaultGridItemEditor>
+											<fx:Script>
+												<![CDATA[ 
+													override public function save():Boolean
+													{
+														if((value==null)||(value=="")){
+															data.start = null;
+															return true;
+														}
+														try{
+															data.start = new Number(value);
+															if(isNaN(data.start))
+																data.start = null;
+														}catch(ex:Error){
+															data.start = null;
+														}
+														return true;
+													}
+												]]>
+											</fx:Script>
+										</s:DefaultGridItemEditor>
+									</fx:Component>
+								</s:itemEditor>
+							</s:GridColumn>
+							<s:GridColumn dataField="length" headerText="Length">
+								<s:itemEditor>
+									<fx:Component>
+										<s:DefaultGridItemEditor>
+											<fx:Script>
+												<![CDATA[ 
+													override public function save():Boolean
+													{
+														if((value==null)||(value=="")){
+															data.length = null;
+															return true;
+														}
+														try{
+															data.length = new Number(value);
+															if(isNaN(data.length))
+																data.length = null;
+														}catch(ex:Error){
+															data.length = null;
+														}
+														return true;
+													}
+												]]>
+											</fx:Script>
+										</s:DefaultGridItemEditor>
+									</fx:Component>
+								</s:itemEditor>
+							</s:GridColumn>
+							<s:GridColumn dataField="reset" headerText="Reset">
+								<s:itemEditor>
+									<fx:Component>
+										<s:DefaultGridItemEditor>
+											<fx:Script>
+												<![CDATA[ 
+													override public function save():Boolean
+													{
+														if((value==null)||(value=="")){
+															data.reset = null;
+															return true;
+														}
+														data.reset=((value=="1")||(value=="true"));
+														return true;
+													}
+												]]>
+											</fx:Script>
+										</s:DefaultGridItemEditor>
+									</fx:Component>
+								</s:itemEditor>
+							</s:GridColumn>
+						</s:ArrayList>
+					</s:columns>
+				</s:DataGrid>
+			</mx:VBox>
+		</mx:HBox>
+		<mx:HBox width="100%" height="100%">
+			<mx:VBox width="50%" height="100%" borderStyle="solid" verticalAlign="top">
+				<mx:HBox width="100%">
+					<s:Button label="Play" click="play()"/>
+					<s:Button label="Pause" click="pause()"/>
+					<s:Button label="Resume" click="resume()"/>
+					<s:Button label="Toggle Pause" click="togglePause()"/>
+					<s:Button label="Stop" click="stop()"/>
+				</mx:HBox>
+				<mx:HBox width="100%">
+					<s:Button label="_ns.play(false)" click="playSpecial(false)"/>
+					<s:Button label="_ns.play(true)" click="playSpecial(true)"/>
+					<s:Button label="_ns.play(null)" click="playSpecial(null)"/>
+					<s:Button label="_ns.play(123)" click="playSpecial(123)"/>
+					<s:Button label="_ns.play(&quot;&quot;)" click="playSpecial(&quot;&quot;)"/>
+				</mx:HBox>
+				<mx:HBox width="100%">
+					<s:Button label="Append new item" click="appendNewItem(&quot;mp4:lg.mp4&quot;);"/>
+					<s:Button label="Append new item1"
+							  click="appendNewItem(&quot;mp4:superMisto.mp4&quot;);"/>
+				</mx:HBox>
+				<mx:HBox width="100%">
+					<mx:Label width="125" text="Seek:" textAlign="right"/>	
+					<s:TextInput id="txtSeek" width="100%" text="10"/>
+					<s:Button id="btnSeek" width="170" label="Seek" click="seek()"/>
+				</mx:HBox>
+				<mx:HBox width="100%">
+					<mx:Label width="125" text="bufferTime:" textAlign="right"/>	
+					<s:TextInput id="txtBufferTime" width="100%" text="2"/>
+					<s:Button width="170" label="SetBufferTime" click="setBufferTime()"/>
+				</mx:HBox>
+				<mx:HBox width="100%">
+					<mx:Label width="125" text="bufferTimeMax:" textAlign="right"/>	
+					<s:TextInput id="txtBufferTimeMax" width="100%" text="20"/>
+					<s:Button width="170" label="SetBufferTimeMax" click="setBufferTimeMax()"/>
+				</mx:HBox>
+				<mx:HBox width="100%">
+					<mx:Label width="125" text="maxPauseBufferTime:" textAlign="right"/>	
+					<s:TextInput id="txtMaxPauseBufferTime" width="100%" text="40"/>
+					<s:Button width="170" label="SetMaxPauseBufferTime"
+							  click="setMaxPauseBufferTime()"/>
+				</mx:HBox>
+			</mx:VBox>
+			<mx:VBox width="50%" height="100%" borderStyle="solid">
+				<s:TextArea id="txtLogs1" width="100%" height="100%"/>
+			</mx:VBox>
+		</mx:HBox>
+	</mx:VBox>
+</s:Application>

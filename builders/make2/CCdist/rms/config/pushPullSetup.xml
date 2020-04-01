@@ -1,0 +1,73 @@
+<!--
+ If not stated otherwise in this file or this component's LICENSE
+ file the following copyright and licenses apply:
+
+ Copyright 2019 RDK Management
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<?xml version="1.0" ?>
+<MAP isArray="false" name="">
+    <STR name="checksum">1f0d12bd6f4523fe1d33cd18ff13d8ec</STR>
+    <MAP isArray="true" name="dash" />
+    <MAP isArray="true" name="hds" />
+    <MAP isArray="true" name="hls" />
+    <MAP isArray="true" name="metalistener" />
+    <MAP isArray="true" name="mss" />
+    <MAP isArray="true" name="process" />
+    <MAP isArray="true" name="pull">
+        <MAP isArray="false" name="0x00000001">
+            <STR name="audioCodecBytes"></STR>
+            <UINT32 name="configId">1</UINT32>
+            <STR name="emulateUserAgent">RDKC Media Server (www.comcast.com) player</STR>
+            <BOOL name="forceTcp">false</BOOL>
+            <STR name="httpProxy">Don&apos;tResolveHost</STR>
+            <BOOL name="isAudio">true</BOOL>
+            <BOOL name="keepAlive">true</BOOL>
+            <STR name="localStreamName">stream2</STR>
+            <UINT8 name="operationType">1</UINT8>
+            <STR name="pageUrl"></STR>
+            <STR name="ppsBytes"></STR>
+            <INT64 name="rangeEnd">-1</INT64>
+            <INT64 name="rangeStart">-2</INT64>
+            <STR name="rangeTimeEnd"></STR>
+            <STR name="rangeTimeStart"></STR>
+            <UINT64 name="rtcpDetectionInterval">10</UINT64>
+            <STR name="sdpCustParams"></STR>
+            <BOOL name="sendRenewStream">false</BOOL>
+            <BOOL name="serializeToConfig">true</BOOL>
+            <STR name="sourceType">live</STR>
+            <STR name="spsBytes"></STR>
+            <STR name="ssmIp"></STR>
+            <STR name="swfUrl"></STR>
+            <STR name="tcUrl"></STR>
+            <UINT64 name="tos">256</UINT64>
+            <UINT64 name="ttl">256</UINT64>
+            <STR name="uri">sercom://0</STR>
+            <STR name="videoSourceIndex">high</STR>
+        </MAP>
+    </MAP>
+    <MAP isArray="true" name="push" />
+    <MAP isArray="true" name="record" />
+    <MAP isArray="false" name="serverVersion">
+        <STR name="banner">RDKC Media Server (www.comcast.com) version 1.7.1 build 5082 with hash: 9c3a1f0c57155f56d180f541854639a9ebb2866b on branch: release/1.7.1_comcast - Pacman - (built for Linaro-gcc4.9-armv7ahf on 2018-01-19T22:00:48.000)</STR>
+        <STR name="branchName">release/1.7.1_comcast</STR>
+        <STR name="buildDate">2018-01-19T22:00:48.000</STR>
+        <STR name="buildNumber">5082</STR>
+        <STR name="codeName">Pacman</STR>
+        <STR name="hash">9c3a1f0c57155f56d180f541854639a9ebb2866b</STR>
+        <STR name="releaseNumber">1.7.1</STR>
+    </MAP>
+    <UINT32 name="version">27</UINT32>
+    <MAP isArray="true" name="webrtc" />
+</MAP>

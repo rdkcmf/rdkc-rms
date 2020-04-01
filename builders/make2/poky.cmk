@@ -1,0 +1,23 @@
+#!/bin/bash
+
+#Set all the build parameters
+BASE_DIR=/home/sandiego/opt/poky/1.7.1/sysroots
+TOOLCHAIN_DIR=$BASE_DIR/i686-pokysdk-linux/usr/bin/arm-poky-linux-gnueabi
+TOOLCHAIN_PREFIX=/arm-poky-linux-gnueabi-
+
+TGT_DIR=$BASE_DIR/cortexa9hf-vfp-neon-poky-linux-gnueabi
+LIB_DIRS="-L$BASE_DIR/i686-pokysdk-linux/usr/lib -L$BASE_DIR/i686-pokysdk-linux/lib -L$TGT_DIR/usr/lib "
+SSL_ARCH=linux-mipsel
+BIND_ID=55
+TARGET_OS_NAME=Linux
+TARGET_OS_VERSION=pokyLinux
+TARGET_OS_ARCH=arm
+TARGET_OS_UNAME="POKY Linux"
+
+export PLATFORM_INCLUDE="-I$TGT_DIR/usr/include"
+export PLATFORM_LIBS=" $LIB_DIRS -lssl -lcrypto -ldl -lrt "
+export PLATFORM_DEFINES=" -DLINUX -DLITTLE_ENDIAN_BYTE_ALIGNED -DNET_EPOLL -DGLOBALLY_ACCOUNT_BYTES"
+export PLATFROM_COMPILE_SWITCHES="-O3 -fdata-sections -ffunction-sections -march=armv7-a -mthumb-interwork -mfloat-abi=hard -mfpu=neon -mtune=cortex-a9 --sysroot=$TGT_DIR"
+export PLATFROM_LINK_SWITCHES="-Wl,--gc-sections "
+export STRIP_PARAMS="-s -g -S -d --strip-unneeded"
+

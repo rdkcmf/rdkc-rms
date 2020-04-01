@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Built on the yocto build machine: .55.48
+#  Last built on the release/1.7.1_avigilon branch
+#
+
+export CPATH=/disk2/opt/avigilon/poky-yocto-k2/sysroots/silvermont-poky-linux/usr/include/
+
+#Set all the build parameters
+TOOLCHAIN_DIR=/disk2/opt/avigilon/poky-yocto-k2/sysroots/x86_64-pokysdk-linux/usr/
+TOOLCHAIN_PREFIX=/bin/x86_64-poky-linux/x86_64-poky-linux-
+
+SSL_ARCH=linux-x86_64
+BIND_ID=84
+TARGET_OS_NAME=PokyLinux
+TARGET_OS_VERSION=2.1
+TARGET_OS_ARCH=x86_64
+TARGET_OS_UNAME="Linux Yocto Poky 2.1 Metadata Revision: unknown"
+
+PLATFORM_DIR=/disk2/opt/avigilon/poky-yocto-k2/sysroots/silvermont-poky-linux/usr/
+export SYSROOT=/disk2/opt/avigilon/poky-yocto-k2/sysroots/silvermont-poky-linux
+export SDKTARGETSYSROOT=$SYSROOT
+
+export PLATFORM_INCLUDE="-I$TOOLCHAIN_DIR/include -I$PLATFORM_DIR/openssl/image/usr/include/ -I$PLATFORM_DIR/include/c++/5.3.0/ -I$PLATFORM_DIR/include/c++/5.3.0/x86_64-poky-linux/"
+#export PLATFORM_LIBS="-L$TOOLCHAIN_DIR/lib -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -ldl -lrt -lpthread "
+export PLATFORM_LIBS="-L$PLATFORM_DIR/lib -L$PLATFORM_DIR/openssl/image/usr/lib/ -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -ldl -lrt -lpthread "
+export PLATFORM_DEFINES=" -DLINUX -DLITTLE_ENDIAN_SHORT_ALIGNED -DNET_EPOLL -DHAS_EPOLL_TIMERS -DGLOBALLY_ACCOUNT_BYTES -DREPLAYXD"
+export PLATFROM_COMPILE_SWITCHES="-O3 -fdata-sections -ffunction-sections -m64 -march=core2 -mtune=core2 -msse3 -mfpmath=sse"
+export PLATFROM_LINK_SWITCHES="-Wl,--gc-sections --sysroot=$SYSROOT "
+export STRIP_PARAMS="-s -g -S -d --strip-unneeded" 

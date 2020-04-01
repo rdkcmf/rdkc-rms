@@ -1,0 +1,230 @@
+#!/bin/sh
+##########################################################################
+# If not stated otherwise in this file or this component's LICENSE
+# file the following copyright and licenses apply:
+#
+# Copyright 2019 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#########################################################################
+### BEGIN INIT INFO
+# Provides:          rdkcms
+# Required-Start:    $local_fs $remote_fs $network $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: RDKC Media Server
+# Description:       start/stop RDKC Media Server
+### END INIT INFO
+
+
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="RDKC Media Server"
+NAME=rdkcms
+DAEMON=/usr/bin/$NAME
+RMS_UID=`id -u rmsd`
+RMS_GID=`id -g rmsd`
+RMS_PID=/var/run/rdkcms/rdkcms.pid
+RMS_CONFIGFILE=/etc/rdkcms/config.lua
+GENERIC_ARGS="--uid=$RMS_UID --gid=$RMS_GID --pid=$RMS_PID $RMS_CONFIGFILE"
+DAEMON_ARGS="--daemon $GENERIC_ARGS"
+CONSOLE_ARGS=$GENERIC_ARGS
+PIDFILE=$RMS_PID
+SCRIPTNAME=/etc/init.d/$NAME
+
+# Exit if the package is not installed
+[ -x "$DAEMON" ] || exit 0
+
+# Read configuration variable file if it is present
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.2-14) to ensure that this file is present
+# and status_of_proc is working.
+. /lib/lsb/init-functions
+
+checkPermissions()
+{
+	WANTED=`id -u root`
+	CURRENT_USERNAME=`whoami`
+	GOT=`id -u $CURRENT_USERNAME`
+	if [ "$WANTED" -ne "$GOT" ]
+	then
+		echo "This script must be run as root"
+		return 3
+	fi
+	return 0
+}
+
+#
+# Function that starts the daemon/service
+#
+do_start()
+{
+	checkPermissions
+	if [ "$?" -ne "0" ]
+	then
+		return 1
+	fi
+	PROC_COUNT=`ps ax|grep $DAEMON|grep -v "grep"|wc -l`
+	if [ "$PROC_COUNT" -ne "0" ]
+	then
+		return 0
+	fi
+	$DAEMON $DAEMON_ARGS >/dev/null 2>&1
+	if [ "$?" -ne "0" ]
+	then
+		return 1
+	fi
+	return 0
+}
+
+do_status()
+{
+        checkPermissions
+        if [ "$?" -ne "0" ]
+        then
+                return 1
+        fi
+        PIDS=`pidof $NAME`
+        if [ "$PIDS" = "" ]
+        then
+                echo "$NAME is not running"
+	else
+		echo "$NAME is runnning with PIDS "$PIDS
+        fi
+        return 0
+}
+do_console()
+{
+	checkPermissions
+	if [ "$?" -ne "0" ]
+	then
+		return 1
+	fi
+	PROC_COUNT=`ps ax|grep $DAEMON|grep -v "grep"|wc -l`
+	if [ "$PROC_COUNT" -ne "0" ]
+	then
+		return 0
+	fi
+	$DAEMON $CONSOLE_ARGS
+	if [ "$?" -ne "0" ]
+	then
+		return 1
+	fi
+	return 0
+}
+
+#
+# Function that stops the daemon/service
+#
+do_stop()
+{
+	checkPermissions
+	if [ "$?" -ne "0" ]
+	then
+		return 1
+	fi
+	ALLPIDS=`ps ax|grep $DAEMON|grep -v "grep"|sed "s/^[ \t]*\([0-9]*\).*/\1/"|tr "\n" " "`
+	if [ "$ALLPIDS" = "" ]
+	then
+		return 0
+	fi
+	kill -TERM $ALLPIDS
+	sleep 1
+	PROC_COUNT=`ps ax|grep $DAEMON|grep -v "grep"|wc -l`
+	if [ "$PROC_COUNT" -ne "0" ]
+	then
+		sleep 5
+		kill -KILL $ALLPIDS
+	fi
+	return 0;
+}
+
+case "$1" in
+	start)
+		[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
+		do_start
+		if [ "$?" -ne "0" ]
+		then
+			[ "$VERBOSE" != no ] && log_end_msg 1
+			exit 1
+		else
+			[ "$VERBOSE" != no ] && log_end_msg 0
+			exit 0
+		fi
+		;;
+	stop)
+		[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+		do_stop
+		if [ "$?" -ne "0" ]
+		then
+			[ "$VERBOSE" != no ] && log_end_msg 1
+			exit 1
+		else
+			[ "$VERBOSE" != no ] && log_end_msg 0
+			exit 0
+		fi
+		;;
+	status)
+		[ "$VERBOSE" != no ] && log_daemon_msg "Status $DESC" "$NAME"
+		do_status
+		if [ "$?" -ne "0" ]
+		then
+				[ "$VERBOSE" != no ] && log_end_msg 1
+				exit 1
+		else
+				[ "$VERBOSE" != no ] && log_end_msg 0
+				exit 0
+		fi
+		;;
+	start_console)
+		[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+		do_console
+		if [ "$?" -ne "0" ]
+		then
+			[ "$VERBOSE" != no ] && log_end_msg 1
+			exit 1
+		else
+			[ "$VERBOSE" != no ] && log_end_msg 0
+			exit 0
+		fi
+		;;
+	restart|force-reload)
+		[ "$VERBOSE" != no ] && log_daemon_msg "Restarting $DESC" "$NAME"
+		do_stop
+		if [ "$?" -ne "0" ]
+		then
+			[ "$VERBOSE" != no ] && log_end_msg 1
+			exit 1
+		else
+			do_start
+			if [ "$?" -ne "0" ]
+			then
+				[ "$VERBOSE" != no ] && log_end_msg 1
+				exit 1
+			else
+				[ "$VERBOSE" != no ] && log_end_msg 0
+				exit 0
+			fi
+		fi
+		;;
+	*)
+		echo "Usage: $SCRIPTNAME {start|stop|status|restart|start_console|force-reload}" >&2
+		exit 1
+		;;
+esac

@@ -1,0 +1,412 @@
+/**
+##########################################################################
+# If not stated otherwise in this file or this component's LICENSE
+# file the following copyright and licenses apply:
+#
+# Copyright 2019 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+##########################################################################
+**/
+
+
+
+#ifdef HAS_LUA
+extern "C" {
+#include <lualib.h>
+#include <lauxlib.h>
+}
+#include "utils/lua/luautils.h"
+#include "utils/logging/logging.h"
+
+void * _lua_alloc(void *ud, void *ptr, size_t osize, size_t nsize) {
+	if (nsize == 0) {
+		if (ptr != NULL)
+			free(ptr);
+		return NULL;
+	} else {
+		return realloc(ptr, nsize);
+	}
+}
+
+lua_State * CreateLuaState(void *pOpaque) {
+	lua_State *pResult = lua_newstate(_lua_alloc, pOpaque);
+	luaL_openlibs(pResult);
+	return pResult;
+}
+
+void DestroyLuaState(lua_State *pLuaState) {
+	lua_close(pLuaState);
+}
+
+bool PopVariant(lua_State *pLuaState, Variant &variant, int32_t idx, bool pop) {
+	variant.Reset();
+	int32_t type = lua_type(pLuaState, idx);
+	switch (type) {
+		case LUA_TNIL:
+		{
+			variant.Reset();
+			if (pop)
+				lua_remove(pLuaState, idx);
+			break;
+		}
+		case LUA_TBOOLEAN:
+		{
+			variant = (bool)(lua_toboolean(pLuaState, idx) != 0);
+			if (pop)
+				lua_remove(pLuaState, idx);
+			break;
+		}
+		case LUA_TNUMBER:
+		{
+			lua_Number luaNumber = lua_tonumber(pLuaState, idx);
+			if (pop)
+				lua_remove(pLuaState, idx);
+			variant = (double) luaNumber;
+			variant.Compact();
+
+			break;
+		}
+		case LUA_TSTRING:
+		{
+			string nullable = lua_tostring(pLuaState, idx);
+			if (pop)
+				lua_remove(pLuaState, idx);
+			if (nullable == VAR_NULL_VALUE)
+				variant = Variant();
+			else
+				variant = nullable;
+			break;
+		}
+		case LUA_TTABLE:
+		{
+			bool isArray = true;
+			lua_pushnil(pLuaState);
+			while (lua_next(pLuaState, idx) != 0) {
+				Variant value;
+				if (!PopVariant(pLuaState, value, lua_gettop(pLuaState)))
+					return false;
+
+				Variant key;
+				if (!PopVariant(pLuaState, key, lua_gettop(pLuaState), false))
+					return false;
+
+				variant[key] = value;
+				isArray &= (key == _V_NUMERIC);
+			}
+
+			variant.IsArray(isArray);
+
+			if (variant.HasKey(VAR_MAP_NAME)) {
+				variant.SetTypeName(variant[VAR_MAP_NAME]);
+				variant.RemoveKey(VAR_MAP_NAME);
+			} else {
+				variant.ConvertToTimestamp();
+			}
+			if (pop)
+				lua_remove(pLuaState, idx);
+			break;
+		}
+		default:
+		{
+			WARN("Element type not supported: %d (0x%x)", type, type);
+			return false;
+		}
+	}
+	return true;
+}
+
+bool PopStack(lua_State *pLuaState, Variant &variant) {
+	variant.Reset();
+	variant.IsArray(true);
+	while (lua_gettop(pLuaState) > 0) {
+		Variant temp;
+		if (!PopVariant(pLuaState, temp)) {
+			FATAL("Unable to pop variant");
+			return false;
+		}
+		variant.PushToArray(temp);
+	}
+	return true;
+}
+
+bool PushVariant(lua_State *pLuaState,
+		Variant &variant, bool substituteNullables) {
+	switch ((VariantType) variant) {
+		case V_UNDEFINED:
+		case V_NULL:
+		{
+			if (substituteNullables)
+				lua_pushstring(pLuaState, VAR_NULL_VALUE);
+			else
+				lua_pushnil(pLuaState);
+			return true;
+		}
+		case V_STRING:
+		{
+			lua_pushstring(pLuaState, STR(variant));
+			return true;
+		}
+		case V_INT8:
+		case V_INT16:
+		case V_INT32:
+		case V_INT64:
+		case V_UINT8:
+		case V_UINT16:
+		case V_UINT32:
+		case V_UINT64:
+		case V_DOUBLE:
+		{
+			lua_pushnumber(pLuaState, (double) variant);
+			return true;
+		}
+		case V_BOOL:
+		{
+			lua_pushboolean(pLuaState, (bool)variant);
+			return true;
+		}
+		case V_TIMESTAMP:
+		{
+			struct tm tempTm = (struct tm) variant;
+
+			lua_createtable(pLuaState, 0, 0);
+
+			lua_pushstring(pLuaState, VAR_TYPE);
+			lua_pushstring(pLuaState, VAR_TIMESTAMP);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_YEAR);
+			lua_pushnumber(pLuaState, tempTm.tm_year + 1900);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_MONTH);
+			lua_pushnumber(pLuaState, tempTm.tm_mon + 1);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_DAY);
+			lua_pushnumber(pLuaState, tempTm.tm_mday);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_HOUR);
+			lua_pushnumber(pLuaState, tempTm.tm_hour + 1);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_MIN);
+			lua_pushnumber(pLuaState, tempTm.tm_min);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_SEC);
+			lua_pushnumber(pLuaState, tempTm.tm_sec);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_ISDST);
+			lua_pushboolean(pLuaState, false);
+			lua_settable(pLuaState, -3);
+
+			return true;
+		}
+		case V_DATE:
+		{
+			struct tm tempTm = (struct tm) variant;
+
+			lua_createtable(pLuaState, 0, 0);
+
+			lua_pushstring(pLuaState, VAR_TYPE);
+			lua_pushstring(pLuaState, VAR_DATE);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_YEAR);
+			lua_pushnumber(pLuaState, tempTm.tm_year + 1900);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_MONTH);
+			lua_pushnumber(pLuaState, tempTm.tm_mon + 1);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_DAY);
+			lua_pushnumber(pLuaState, tempTm.tm_mday);
+			lua_settable(pLuaState, -3);
+			return true;
+		}
+		case V_TIME:
+		{
+			struct tm tempTm = (struct tm) variant;
+
+			lua_createtable(pLuaState, 0, 0);
+
+			lua_pushstring(pLuaState, VAR_TYPE);
+			lua_pushstring(pLuaState, VAR_TIME);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_YEAR);
+			lua_pushnumber(pLuaState, 1970);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_MONTH);
+			lua_pushnumber(pLuaState, 1);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_DAY);
+			lua_pushnumber(pLuaState, 1);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_HOUR);
+			lua_pushnumber(pLuaState, tempTm.tm_hour + 1);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_MIN);
+			lua_pushnumber(pLuaState, tempTm.tm_min);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_SEC);
+			lua_pushnumber(pLuaState, tempTm.tm_sec);
+			lua_settable(pLuaState, -3);
+
+			lua_pushstring(pLuaState, VAR_ISDST);
+			lua_pushboolean(pLuaState, false);
+			lua_settable(pLuaState, -3);
+
+			return true;
+		}
+		case V_TYPED_MAP:
+		case V_MAP:
+		{
+			lua_createtable(pLuaState, 0, 0);
+
+			if ((VariantType) variant == V_TYPED_MAP) {
+				lua_pushstring(pLuaState, VAR_MAP_NAME);
+				lua_pushstring(pLuaState, STR(variant.GetTypeName()));
+				lua_settable(pLuaState, -3);
+			}
+
+			FOR_MAP(variant, string, Variant, i) {
+				const char *pKey = MAP_KEY(i).c_str();
+				if ((MAP_KEY(i).length() == 10) && (pKey[0] == '0')
+						&& (pKey[1] == 'x')) {
+					uint32_t index = (uint32_t) strtol(pKey, NULL, 16);
+					lua_pushnumber(pLuaState, index);
+				} else {
+					lua_pushstring(pLuaState, pKey);
+				}
+				if (!PushVariant(pLuaState, MAP_VAL(i), true)) {
+					FINEST("Unable to push primitive");
+					return false;
+				}
+				lua_settable(pLuaState, -3);
+			}
+			return true;
+		}
+		default:
+		{
+			FATAL("Unknown type %d", (VariantType) variant);
+			return false;
+		}
+	}
+}
+
+bool EvalLuaExpression(lua_State *pLuaState, string expression) {
+	if (luaL_dostring(pLuaState, STR("return " + expression)) != 0) {
+		Variant v;
+		PopStack(pLuaState, v);
+		FATAL("Unable to evaluate expression %s\n%s", STR(expression), STR(v.ToString()));
+		return false;
+	}
+	return true;
+}
+
+bool LoadLuaScriptFromFile(string file, lua_State *pLuaState, bool pCall) {
+	if (luaL_loadfile(pLuaState, STR(file)) != 0) {
+		WARN("Error parsing file %s: %s",
+				STR(file),
+				lua_tostring(pLuaState, -1));
+		return false;
+	}
+
+	if (pCall) {
+		if (lua_pcall(pLuaState, 0, LUA_MULTRET, 0) != 0) {
+			FATAL("Error parsing file %s: %s",
+					STR(file),
+					lua_tostring(pLuaState, -1));
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool LoadLuaScriptFromString(string luaScript, lua_State *pLuaState, bool pCall) {
+	if (luaL_loadstring(pLuaState, STR(luaScript)) != 0) {
+		FATAL("Error parsing script %s: %s",
+				STR(luaScript),
+				lua_tostring(pLuaState, -1));
+		return false;
+	}
+
+	if (pCall) {
+		if (lua_pcall(pLuaState, 0, 0, 0) != 0) {
+			FATAL("Error parsing script %s: %s",
+					STR(luaScript),
+					lua_tostring(pLuaState, -1));
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool ReadLuaState(lua_State *pLuaState, string node, Variant &configuration) {
+
+	if (!EvalLuaExpression(pLuaState, node)) {
+		FATAL("Unable to read config. No %s section defined", STR(node));
+		return false;
+	}
+
+	if (!PopVariant(pLuaState, configuration)) {
+		FATAL("Unable to read config. Invalid configuration section");
+		return false;
+	}
+
+	if ((VariantType) configuration != V_MAP) {
+		FATAL("Unable to read config. Invalid configuration section");
+		return false;
+	}
+
+	return true;
+}
+
+bool ReadLuaFile(string fileName, string section, Variant &configuration) {
+	lua_State *pLuaState = CreateLuaState(NULL);
+
+	if (!LoadLuaScriptFromFile(fileName, pLuaState)) {
+		DestroyLuaState(pLuaState);
+		return false;
+	}
+
+	bool res = ReadLuaState(pLuaState, section, configuration);
+	DestroyLuaState(pLuaState);
+	return res;
+}
+
+bool ReadLuaString(string script, string section, Variant &configuration) {
+	lua_State *pLuaState = CreateLuaState(NULL);
+
+	if (!LoadLuaScriptFromString(script, pLuaState)) {
+		DestroyLuaState(pLuaState);
+		return false;
+	}
+
+	bool res = ReadLuaState(pLuaState, section, configuration);
+	DestroyLuaState(pLuaState);
+	return res;
+}
+#endif /* HAS_LUA */

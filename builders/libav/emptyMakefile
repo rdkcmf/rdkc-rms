@@ -1,0 +1,6 @@
+all:
+	@echo "SKIPPING"
+install:
+	@echo "SKIPPING"
+clean:
+	@echo "SKIPPING"

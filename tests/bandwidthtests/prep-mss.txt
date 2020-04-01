@@ -1,0 +1,104 @@
+##########################################################################
+# If not stated otherwise in this file or this component's LICENSE
+# file the following copyright and licenses apply:
+#
+# Copyright 2019 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#########################################################################PREPARATION FOR MSS PERFORMANCE TESTS
+This part is only required if no MSS test files have been prepared yet.
+
+A. PREPARATION AT BOTH SERVER & CLIENT
+1. Install Ruby
+   sudo apt-get update
+   sudo apt-get install ruby1.9.3
+2. Install axlsx for the spreadsheet converter (server only)
+   gem install axlsx
+3. Check if the EWS is working properly:
+   Browse http://<rms_ip>:8888/info.php
+   => shows PHP status.
+4. Check if the RMS is working properly:
+   Browse http://<rms_ip>:8888/
+   (This should redirect the browser to http://<rms_ip>:8888/RMS_Web_UI/index.php)
+   Click Connect.
+   => shows RMS status.
+
+
+B. CREATE+PULL TEST
+This tests CPU and memory usage at the server while doing multiple MSS creation and pullstream.
+
+1. PREPARATION (FOR CREATE+PULL TEST)
+a. If the RMS is not running at the server side, start it.
+
+2. SETTINGS (FOR CREATE+PULL TEST)
+These settings can be modified to change the behavior of the MSS create+pull test:
+a. IN_URI = "rtmp://localhost/vod/trans.mp4" #source stream to be pulled
+b. Copy the media file, e.g. trans.mp4, to /var/rdkcms/media
+Test #1 settings:
+c. TEST1_DURATION = 400 #seconds, maximum test duration
+d. TEST1_COUNT = 10 #maximum simultaneous creates/pulls
+e. TEST1_INTERVAL = 2 #number of creates/pulls before inserting a delay
+f. TEST1_DELAY = 25 #seconds, delay after a number of creates/pulls
+Test #2 settings:
+g. TEST2_DURATION = 600 #seconds, maximum test duration
+h. TEST2_COUNT = 50 #maximum simultaneous creates/pulls
+i. TEST2_INTERVAL = 10 #number of creates/pulls before inserting a delay
+j. TEST2_DELAY = 25 #seconds, delay after a number of creates/pulls
+Note: The test duration should be longer than the media file duration + ramp up time to prevent abrupt ramp down. 
+
+
+C. PLAYBACK TEST
+This tests server bandwidth, CPU, and memory usage during multiple MSS playbacks from the client.
+
+1. PREPARATION (FOR PLAYBACK TEST)
+--CLIENT SIDE--
+a. The RMS is not required at the client side.
+--SERVER SIDE--
+b. If the RMS is not running at the server side, start it.
+c. Run mss-server.rb.
+d. Press [9] to remove all config entries.
+e. Press [2] to pull 1 stream from an external source.
+f. Press [3] to create an MSS stream.
+g. Wait for around 1 minute.
+h. Press [9] to remove all config entries.
+i. Copy mss433.tgz from the source server, typically:
+   wget http://<test_source_ip>:8888/<mss_media>.tgz
+j. Extract <mss_test_files>.tgz to /var/www (overwriting /var/www/mss/<mss_stream>).
+k. Delete <mss_media>.tgz to free up storage space.
+l. Change ownership and permissions to allow MSS playback, typically:
+   cd /var/www
+   sudo chown rmsd:rmsd mss -R
+   cd mss
+   sudo chmod g+w <mss_stream>
+m. Test the playability of the MSS test files, typically:
+   Open FireFox & this URI "http://smf.cloudapp.net/healthmonitor" to play MSS.
+   Set the Stream URL to: http://<rms_ip>:8888/mss/<mss_stream>/manifest.ismc
+   Note: Silverlight is required to be able to play MSS files.
+   For Ubuntu 14.04, install PipeLight, a Silverlight alternative.
+   http://www.itworld.com/article/2697813/install-silverlight-alternative-pipelight-in-ubuntu-14-04.html
+n. If MSS test files are not playable, review steps A-2 and C-1-m.
+
+2. SETTINGS (FOR PLAYBACK TEST)
+These settings can be modified to change the behavior of the MSS ramp test:
+a. MSS_RAMP_STEPS = number of steps to ramp up/down
+b. MSS_RAMP_PLAYERS = number of simultaneous playbacks per step
+c. MSS_RAMP_DELAY = delay in seconds between steps
+d. MSS_BIT_RATE = bitrate of simulated playback in bits/second
+e. REMOTE_IP = partner IP address
+f. IN_URI = source URI for pullstream
+g. IN_STREAM_NAME = localstreamname for pullstream and createmssstream
+h. Other settings that may affect MSS performance:
+   Linux: ulimit -n
+   EWS: maxConcConnSameIP
+   EWS: threadPoolSize
+

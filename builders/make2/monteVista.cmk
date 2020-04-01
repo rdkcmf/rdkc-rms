@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#Set all the build parameters
+TOOLCHAIN_DIR=/disk2/opt/mv_pro_5.0/montavista/pro/devkit/arm/v5t_le/armv5tl-montavista-linux-gnueabi/
+TOOLCHAIN_PREFIX=/bin/
+
+
+SSL_ARCH=linux-armv4
+TARGET_OS_NAME=MonteVistaPro
+TARGET_OS_VERSION=5.0
+TARGET_OS_ARCH=armv5t_le
+TARGET_OS_UNAME="Linux localhost 3.6.11+ 371 PREEMPT arm v5t_le GNU/Linux"
+
+export PLATFORM_INCLUDE="-I$TOOLCHAIN_DIR/include"
+export PLATFORM_LIBS="-L$TOOLCHAIN_DIR/lib -lssl -lcrypto -ldl -lrt "
+export PLATFORM_DEFINES=" -DLINUX -DLITTLE_ENDIAN_SHORT_ALIGNED -DNET_EPOLL"
+export PLATFROM_COMPILE_SWITCHES="-O3 -fdata-sections -ffunction-sections "
+export PLATFROM_LINK_SWITCHES="-Wl,--gc-sections "
+export STRIP_PARAMS="-s -S -g -x -X"
+

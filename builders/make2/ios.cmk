@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Required headers
+IOKIT_HEADERS=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/System/Library/Frameworks/IOKit.framework/Headers
+OSTYPE_HEADER=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/usr/include/libkern/OSTypes.h
+
+# Set all the build parameters
+if [[ "${TOOLCHAIN_DIR}" == "" ]]; then
+	TOOLCHAIN_DIR=/Applications/Xcode.app/Contents/Developer
+fi
+TOOLCHAIN_PREFIX=/usr/bin/
+
+TARGET_OS_NAME=iOS
+TARGET_OS_VERSION=10.1
+TARGET_OS_UNAME="iOS"
+MIN_IOS_VERSION=8.1
+
+XC_TOOLCHAIN=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+# Needs to be exported since this is used by compile.mk
+export STRIP=$XC_TOOLCHAIN/strip
+export AR=$XC_TOOLCHAIN/ar
+
+PLATFORM=iPhoneOS
+SSL_ARCH=iphoneos-cross
+
+if [[ "${IOS_TARGET_ARCH}" == "i386" || "${IOS_TARGET_ARCH}" == "x86_64" ]]; then
+	PLATFORM=iPhoneSimulator
+
+	if [[ "${IOS_TARGET_ARCH}" == "x86_64" ]]; then
+		SSL_ARCH=darwin64-x86_64-cc
+	fi
+elif [[ "${IOS_TARGET_ARCH}" == "" ]]; then
+	IOS_TARGET_ARCH=armv7
+fi
+
+# Needs to be exported since this is used by compile.mk
+export IOS_TARGET_ARCH
+
+PLATFORM_DIR=/Applications/Xcode.app/Contents/Developer/Platforms/$PLATFORM.platform/Developer/SDKs/$PLATFORM.sdk
+TARGET_OS_ARCH=$IOS_TARGET_ARCH
+
+# Create symbolic link if the header files for this platform does not exist yet
+TARGET_IOKIT_HEADERS=$PLATFORM_DIR/System/Library/Frameworks/IOKit.framework/Headers
+if [ ! -f $TARGET_IOKIT_HEADERS ]; then
+	sudo ln -s $IOKIT_HEADERS $TARGET_IOKIT_HEADERS
+fi
+
+TARGET_OSTYPE_HEADER=$PLATFORM_DIR/usr/include/libkern/OSTypes.h
+if [ ! -f $TARGET_OSTYPE_HEADER ]; then
+	sudo ln -s $OSTYPE_HEADER $TARGET_OSTYPE_HEADER
+fi
+
+export PLATFORM_INCLUDE="-I$TOOLCHAIN_DIR/include"
+export PLATFORM_LIBS="-L$TOOLCHAIN_DIR/lib -lssl -lcrypto -ldl -lpthread "
+export PLATFORM_DEFINES="-DIOS -DOSX -DLITTLE_ENDIAN_BYTE_ALIGNED -DNET_KQUEUE -DHAS_UDS"
+export PLATFROM_COMPILE_SWITCHES="-O3 -pipe -fembed-bitcode -arch $IOS_TARGET_ARCH -isysroot $PLATFORM_DIR -stdlib=libstdc++ -mios-version-min=$MIN_IOS_VERSION "
+export PLATFROM_LINK_SWITCHES="-Wl -arch $IOS_TARGET_ARCH -isysroot $PLATFORM_DIR -mios-version-min=$MIN_IOS_VERSION -framework CoreFoundation -framework IOKit -lstdc++.6 "
+export STRIP_PARAMS="-S -x -X"
+

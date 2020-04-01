@@ -1,0 +1,59 @@
+Name:		__PACKAGE_NAME__
+Version:	__VERSION__
+Requires:	rms-libavbin, rms-web
+Release:	1%{?dist}
+Summary:	__SUMMARY__
+Group:		Networking/Daemons
+License:	License
+URL:		http://www.comcast.com
+BuildRoot:	%{_tmppath}
+Packager:	RMS_PACKAGE
+
+%description
+__DESCRIPTION__
+
+%install
+mkdir -p $RPM_BUILD_ROOT
+cp -r $RMS_DIST_FOLDER/* $RPM_BUILD_ROOT/
+
+%post
+testError ()
+{
+	if [ "$?" -ne "0" ]
+	then
+		echo $1
+		exit 1
+	fi
+}
+
+createUserAndGroup ()
+{
+	if ! /usr/bin/getent group rmsd >/dev/null
+	then
+		/usr/sbin/groupadd rmsd
+		testError "Unable to create group rmsd"
+	fi
+
+	if ! /usr/bin/getent passwd rmsd >/dev/null
+	then
+		/usr/sbin/useradd -c "RDKC Media Server Daemon" -g rmsd -r -N -s /usr/sbin/nologin rmsd
+	fi
+}
+
+applyPermissions ()
+{
+	/bin/chown -R rmsd:rmsd /var/rdkcms
+	/bin/chown -R rmsd:rmsd /var/log/rdkcms
+	/bin/chown -R rmsd:rmsd /var/run/rdkcms
+}
+
+createUserAndGroup
+applyPermissions
+/sbin/chkconfig --add rdkcms
+
+%preun
+/sbin/service rdkcms stop > /dev/null 2>&1
+/sbin/chkconfig --del rdkcms
+
+%files
+%defattr(-,root,root,-)

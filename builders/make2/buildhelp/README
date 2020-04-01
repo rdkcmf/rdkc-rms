@@ -1,0 +1,8 @@
+For MIPS
+
+You have to build openssl manually.  Replace the Config file with the Configure file in this directory.
+Then use the following commands:
+./Configure no-shared --prefix=/disk2/opt/liquidimage_mips/ --openssldir=/disk2/opt/liquidimage_mips/ linux-mipsel
+(make sure you want mipsel vs mips)  You may have to modify/remove the fPIC option from the "mips" option in the Configure directory
+make CC="/disk2/opt/liquidimage_mips/bin/mipsel-linux-gnu-gcc" AR="/disk2/opt/liquidimage_mips/bin/mipsel-linux-gnu-ar r" RANLIB="/disk2/opt/liquidimage_mips/bin/mipsel-linux-gnu-ranlib"
+(of course replace with your actual tool chain)

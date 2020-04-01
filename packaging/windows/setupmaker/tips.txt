@@ -1,0 +1,43 @@
+For Windows distributions, there is a run script for running the server in a command prompt. This script simply runs the Media Server inline, using config\config.lua as the main server configuration.
+    run_console_rms.bat
+
+There are several other scripts that can be used to create and manipulate the server as a Windows Service. These scripts need to be run as an administrator. You can verify they have worked by opening the Windows Services tool and looking for the RDKCMediaServer service.
+    services\rms\create.bat : Creates and starts the Windows service
+    services\rms\remove.bat : Removes the Windows service
+    services\rms\start.bat : Starts the service if not yet started
+    services\rms\stop.bat : Stops the service if it is currently running
+    services\srvany.exe : Installs programs as services (from Microsoft).
+
+
+RDKC MEDIA SERVER COMMAND LINE DEFINITION
+
+    rdkcms [OPTIONS] [config_file_path]
+
+OPTIONS:
+    --help
+      Prints this help and exit
+
+    --version
+      Prints the version and exit.
+
+    --use-implicit-console-appender
+      Adds a console log appender.
+      Particularly useful when the server starts and stops immediately.
+      Allows you to see if something is wrong with the config file
+
+    (The options below apply to Linux installations only.)
+ 
+    --daemon
+      Overrides the daemon setting inside the config file and forces
+      the server to start in daemon mode.
+
+    --uid=<uid>
+      Run the process with the specified user id
+
+    --gid=<gid>
+      Run the process with the specified group id
+
+    --pid=<pid_file>
+      Create PID file.
+      Works only if --daemon option is specified
+

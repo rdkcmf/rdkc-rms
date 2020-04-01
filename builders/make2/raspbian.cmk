@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#Set all the build parameters
+TOOLCHAIN_DIR=/disk2/opt/raspi/arm-bcm2708/arm-bcm2708hardfp-linux-gnueabi
+TOOLCHAIN_PREFIX=/bin/arm-bcm2708hardfp-linux-gnueabi-
+
+SSL_ARCH=linux-armv4
+BIND_ID=72
+TARGET_OS_NAME=Debian
+TARGET_OS_VERSION=7.0
+TARGET_OS_ARCH=armv6l
+TARGET_OS_UNAME="Linux localhost 3.6.11+ 371 PREEMPT Thu Feb 7 16:31:35 GMT 2013 armv6l GNU/Linux"
+
+export PLATFORM_INCLUDE="-I$TOOLCHAIN_DIR/include"
+export PLATFORM_LIBS="-L$TOOLCHAIN_DIR/lib -lssl -lcrypto -ldl -lrt -lpthread "
+export PLATFORM_DEFINES=" -DLINUX -DLITTLE_ENDIAN_BYTE_ALIGNED -DNET_EPOLL"
+export PLATFROM_COMPILE_SWITCHES="-O3 -pipe -march=armv6j "
+export PLATFROM_LINK_SWITCHES="-Wl,--gc-sections "
+export STRIP_PARAMS="-s -S -g -x -X"
+

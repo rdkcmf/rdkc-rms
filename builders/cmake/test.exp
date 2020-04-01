@@ -1,0 +1,55 @@
+#!/usr/bin/expect
+##########################################################################
+# If not stated otherwise in this file or this component's LICENSE
+# file the following copyright and licenses apply:
+#
+# Copyright 2019 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#########################################################################
+# This script is used to automate the testing of HDS through running the following
+# sequences:
+#
+# probably clean the pushpullconfig.xml?
+# telnet localhost 1112
+pullstream uri=rtmp://localhost/live/mp4:test.mp4 localstreamname=test
+# createhdsstream localstreamnames=test targetfolder=../media streamtype=recorded
+
+# Wait for the rdkcmediaserver to start
+sleep 3
+
+# Connect to rdkcmediaserver using telnet
+spawn telnet localhost 1112
+
+# TODO add error checking in case we can't connect to the server (e.g. down)
+
+# Expect the response from the server
+expect "Escape character is '^]'."
+
+# Send out the pull request
+send "pullstream uri=rtmp://localhost/live/mp4:test.mp4 localstreamname=test\r"
+
+# Expect a success
+expect "SUCCESS"
+
+# Pause for a second then continue
+sleep 1
+
+# Send out the createhdsstream request
+send "createhdsstream localstreamnames=test targetfolder=/var/www/hds streamtype=recorded\r"
+
+# Expect a success
+expect "SUCCESS"
+
+# Hand over the control to telnet if necessary
+#interact

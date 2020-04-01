@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#Set all the build parameters
+TOOLCHAIN_DIR=/usr/
+TOOLCHAIN_PREFIX=/bin/arm-linux-gnueabihf-
+
+BIND_ID=78
+
+SSL_ARCH=linux-armv4
+TARGET_OS_NAME=ArmLinux
+TARGET_OS_VERSION=GNUeabi
+TARGET_OS_ARCH=armv6l
+TARGET_OS_UNAME="Linux localhost 3.6.11+ 371 PREEMPT Thu Feb 7 16:31:35 GMT 2013 armv6l GNU/Linux"
+
+export PLATFORM_INCLUDE="-I$TOOLCHAIN_DIR/include -I-L/disk2/opt/gnueabihf-ssl/include"
+export PLATFORM_LIBS="-L$TOOLCHAIN_DIR/lib -L/disk2/opt/gnueabihf-ssl/lib -lssl -lcrypto -ldl -lrt "
+export PLATFORM_DEFINES=" -DLINUX -DLITTLE_ENDIAN_SHORT_ALIGNED -DNET_EPOLL -DGLOBALLY_ACCOUNT_BYTES"
+export PLATFROM_COMPILE_SWITCHES="-O3 -fdata-sections -ffunction-sections "
+export PLATFROM_LINK_SWITCHES="-Wl,--gc-sections "
+export STRIP_PARAMS="-s -g -S -d --strip-unneeded"
+

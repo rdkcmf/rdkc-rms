@@ -1,0 +1,63 @@
+# GCC Compiled Static libraries
+*.a
+
+# GCC Compiled Shared libraries
+*.so
+
+# Linker Intermediat Files
+*.cppobj.o
+*.cobj.o
+# Cross Compiled objects
+*.o
+
+# CMake files
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+
+# RMS specific files
+builders/cmake/rdkcmediaserver/rdkcmediaserver
+builders/cmake/hlstool/hlstool
+builders/cmake/license/autobindlicense/autobindlicense
+builders/cmake/license/licensecreator/licensecreator
+builders/cmake/mp4writer/mp4writer
+builders/cmake/precompiled.gch/
+builders/cmake/tests/tests
+builders/cmake/v4l2dumper/v4l2dumper
+builders/cmake/webserver/rms-webserver
+
+*.opensdf
+*.sdf
+builders/VS2010/ipch/
+*.tmp
+sources/common/include/version.h
+builders/VS2010/Intermediate/
+packaging/windows/setupmaker/holding/
+packaging/unix_generic/dist*
+builders/VS2010/out/
+builders/VS2013/ipch/
+builders/VS2013/Intermediate/
+builders/VS2013/out/
+builders/VS2013/tests.exe
+*.user
+*.suo
+
+# eclipse files
+.cproject
+.project
+.settings/
+
+# netbeans files
+builders/netbeans/linux
+builders/netbeans/osx
+
+# OSX files
+.DS_Store
+
+#vscode files
+.vscode/ipch/*
+
+#crossbuild temp files
+builders/make2/dist/*
+builders/make2/output/*

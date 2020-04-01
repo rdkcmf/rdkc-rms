@@ -1,0 +1,2 @@
+version=1.7.1.5027-armv7ahf-Linaro_gcc4.9
+build_time="Tue Nov  7 19:44:40 UTC 2017"

@@ -1,0 +1,62 @@
+
+{
+    "server": {
+        "port": 4545,
+        "uri": "rrs.myurl.com",
+        "secure": false,
+        "key": null,
+        "cert": null,
+        "password": null,
+        "tokensEnabled": false,
+        "tokenRoomBinding":false,
+        "webServerEnabled": true,
+        "adminAccessEnabled": true,
+        "adminIP": "127.0.0.1",
+        "adminPort": 3030,
+        "logHeartbeat": true
+    },
+    "awsdnshelper": {
+        "enabled": false
+    },
+    "remoteClientToken": {
+        "enabled": false
+    },
+    "remoteRmsToken": {
+        "enabled": false
+    },
+    "remoteAuthToken": {
+        "enabled": false
+    },
+    "remoteTokenValidation": {
+        "enabled": false,
+        "https": true,
+        "port": 8081,
+        "host": "127.0.0.1",
+        "rmsId": "RMSNODE"
+    },
+    "twilio": {
+        "enabled": false,
+	"enableForTurnOnly": false,
+        "selectOneTurnServer": true,
+        "selectOneTurnPort": 443,
+        "selectOneTurnProtocol": "tcp",
+        "keyRotationInterval": 3600,
+        "accountSid": "myaccountsid123",
+        "authToken": "myauthtoken123"
+    },
+    "allowedrooms": [
+    ],
+    "rmsTokens": [
+    ],
+    "stunservers": [
+        {"url": "stun:192.237.213.217:55555"}
+    ],
+    "turnservers": [
+        { "url": "turn:192.168.56.142:55555",
+         "secret": "12345thisIsJustAtest12345",
+         "expiry": 86400 }
+    ]
+}
+
+
+

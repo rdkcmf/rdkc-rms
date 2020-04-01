@@ -1,0 +1,64 @@
+type: service #service, tarball, or windows
+release: 1.7.0 #1.6.6, 1.7.0, or 1.7.1
+RMS_IP: 127.0.0.1
+JSON_CLI_PORT: 1112
+HTTP_CLI_PORT: 7777
+ASCII_CLI_PORT: 1222
+EWS_PORT: 8888
+
+# settings for service type of installation (apt-get or yum) on linux
+service:
+  DIR_WEBROOT: /var/rms-webroot #no trailing separator
+  DIR_CONFIG: /etc/rdkcms #no trailing separator
+  DIR_WEBCONFIG: /etc/rdkcms #no trailing separator
+  DIR_XML: /var/rdkcms/xml #no trailing separator
+  PATH_PUSHPULLSETUP: /var/rdkcms/xml/pushPullSetup.xml
+  DIR_MEDIA: /var/rdkcms/media #dir for media files (no trailing separator)
+  DIR_STORAGE: /var/rdkcms/media #dir for storage media & metadata files (no trailing separator)
+  DIR_TEMP: /tmp #alternate dir for storage media & metadata files (no trailing separator)
+  DIR_RECORD: /var/rms-webroot #dir for record file (no trailing separator)
+  PATH_RECORD: /var/rms-webroot/record.xxx
+  PATH_AVCONV: /usr/bin/rms-avconv
+
+# settings for tarball type of installation on linux
+tarball:
+  DIR_WEBROOT: ../rms-webroot #no trailing separator
+  DIR_CONFIG: ../config #no trailing separator
+  DIR_WEBCONFIG: ../config #no trailing separator
+  DIR_XML: ../config #no trailing separator
+  PATH_PUSHPULLSETUP: ../config/pushPullSetup.xml
+  DIR_MEDIA: ../media #dir for media files (no trailing separator)
+  DIR_STORAGE: ../media #dir for storage media & metadata files (no trailing separator)
+  DIR_TEMP: /tmp #alternate dir for storage media & metadata files (no trailing separator)
+  DIR_RECORD: ../rms-webroot #dir for record file (no trailing separator)
+  PATH_RECORD: ../rms-webroot/record.xxx
+  PATH_AVCONV: ../bin/rms-avconv
+
+# settings for windows type of installation
+windows:
+  DIR_WEBROOT: ..\rms-webroot #no trailing separator
+  DIR_CONFIG: ..\config #no trailing separator
+  DIR_WEBCONFIG: ..\config #no trailing separator
+  DIR_XML: ..\config #no trailing separator
+  PATH_PUSHPULLSETUP: ..\config\pushPullSetup.xml
+  DIR_MEDIA: ..\media #dir for media files (no trailing separator)
+  DIR_STORAGE: ..\media #dir for storage media & metadata files (no trailing separator)
+  DIR_TEMP: c:\windows\temp #alternate dir for storage media & metadata files (no trailing separator)
+  DIR_RECORD: ..\rms-webroot #dir for record file (no trailing separator)
+  PATH_RECORD: ..\rms-webroot\record.xxx
+  PATH_AVCONV: C:\rms\rms-avconv.exe #must be absolute path
+
+# settings for rms release 1.6.6
+1.6.6:
+  RMS_CODENAME: Gladiator
+  RMS_RELEASE: 1.6.6
+
+# settings for rms release 1.7.0
+1.7.0:
+  RMS_CODENAME: PacMan|m|
+  RMS_RELEASE: 1.7.0
+
+# settings for rms release 1.7.1
+1.7.1:
+  RMS_CODENAME: PacMan|m|
+  RMS_RELEASE: 1.7.1

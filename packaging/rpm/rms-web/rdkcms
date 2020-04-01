@@ -1,0 +1,155 @@
+#!/bin/sh
+##########################################################################
+# If not stated otherwise in this file or this component's LICENSE
+# file the following copyright and licenses apply:
+#
+# Copyright 2019 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#########################################################################
+### BEGIN INIT INFO
+# Provides:          rdkcms
+# Required-Start:    $local_fs $remote_fs $network $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: RDKC Media Server
+# Description:       start/stop RDKC Media Server
+### END INIT INFO
+
+
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="RDKC Media Server"
+NAME=rdkcms
+DAEMON=/usr/bin/$NAME
+RMS_UID=`id -u rmsd`
+RMS_GID=`id -g rmsd`
+RMS_PID=/var/run/rdkcms/rdkcms.pid
+RMS_CONFIGFILE=/etc/rdkcms/config.lua
+DAEMON_ARGS="--daemon --uid=$RMS_UID --gid=$RMS_GID --pid=$RMS_PID $RMS_CONFIGFILE"
+PIDFILE=$RMS_PID
+SCRIPTNAME=/etc/init.d/$NAME
+LOCKFILE=/var/lock/subsys/$NAME
+
+# Exit if the package is not installed
+[ -x "$DAEMON" ] || exit 0
+
+. /etc/rc.d/init.d/functions
+
+checkPermissions()
+{
+	WANTED=`id -u root`
+	CURRENT_USERNAME=`whoami`
+	GOT=`id -u $CURRENT_USERNAME`
+	if [ "$WANTED" -ne "$GOT" ]
+	then
+		echo "This script must be run as root"
+		return 1
+	fi
+	return 0
+}
+
+#
+# Function that starts the daemon/service
+#
+do_start()
+{
+	echo -n "Starting $DESC: "
+	checkPermissions
+	if [ "$?" -ne "0" ]
+	then
+		failure
+		echo
+		return 1
+	fi
+	PROC_COUNT=`ps ax|grep $DAEMON|grep -v "grep"|wc -l`
+	if [ "$PROC_COUNT" -ne "0" ]
+	then
+		success
+		echo
+		return 0
+	fi
+	$DAEMON $DAEMON_ARGS >/dev/null 2>&1
+	if [ "$?" -ne "0" ]
+	then
+		failure
+		echo
+		return 1
+	fi
+	touch $LOCKFILE
+	success
+	echo
+	return 0
+}
+
+#
+# Function that stops the daemon/service
+#
+do_stop()
+{
+	echo -n "Stopping $DESC: "
+	checkPermissions
+	if [ "$?" -ne "0" ]
+	then
+		failure
+		echo
+		return 1
+	fi
+	ALLPIDS=`ps ax|grep $DAEMON|grep -v "grep"|sed "s/^[ \t]*\([0-9]*\).*/\1/"|tr "\n" " "`
+	if [ "$ALLPIDS" = "" ]
+	then
+		success
+		echo
+		return 0
+	fi
+	echo -n $" ($ALLPIDS)"
+	kill -TERM $ALLPIDS
+	COUNTER=5
+	FORCE=1
+	until [ $COUNTER -le 0 ]; do
+		PROC_COUNT=`ps ax|grep $DAEMON|grep -v "grep"|wc -l`
+		let COUNTER=COUNTER-1
+		if [ "$PROC_COUNT" -eq "0" ]
+		then
+			COUNTER=0
+			FORCE=0
+		fi
+		sleep 1
+	done
+	if [ "$FORCE" -ne "0" ]
+	then
+		kill -KILL $ALLPIDS
+	fi
+	rm -f $LOCKFILE
+	success
+	echo
+	return 0;
+}
+
+case "$1" in
+	start)
+		do_start
+		;;
+	stop)
+		do_stop
+		;;
+	restart)
+		do_stop
+		do_start
+		;;
+	*)
+		echo "Usage: $SCRIPTNAME {start|stop|restart}" >&2
+		exit 1
+		;;
+esac

@@ -1,0 +1,100 @@
+##########################################################################
+# If not stated otherwise in this file or this component's LICENSE
+# file the following copyright and licenses apply:
+#
+# Copyright 2019 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#########################################################################
+set -e
+
+OLD_IFS=$IFS
+IFS='
+'
+
+testError ()
+{
+	if [ "$?" -ne "0" ]
+	then
+		echo $1
+		IFS=$OLD_IFS
+		exit 1
+	fi
+}
+
+createFolder ()
+{
+	echo "create folder $1"
+	mkdir -p "$1"
+	testError "Unable to create folder $1"
+}
+
+copyFiles ()
+{
+	echo "copy $1 to $2"
+	cp -r "$1" "$2"
+	testError "Unable to copy $1 to $2"
+}
+
+moveFiles ()
+{
+	echo "move $1 to $2"
+	mv "$1" "$2"
+	testError "Unable to move $1 to $2"
+}
+
+removeSvnFiles ()
+{
+	for i in `find $1 -type d -name "\.svn"`
+	do
+		rm -rf $i
+	done
+}
+
+download ()
+{
+	echo downloading $1 into $2
+	curl -sLz "$2" "$1" -o "$2"
+	testError "Unable to download $1 and save it as $2"
+}
+
+gitclone  ()
+{
+	echo cloning $1 into $2
+	git clone -q "$1" "$2"
+	testError "Unable to git clone $1 into $2"
+}
+
+createPackage()
+{
+	CURRENT_DIR=`pwd`
+	cd $1
+	testError "Unable to cd to $1"
+	sh createPackage.sh "$1"
+	testError "Unable to create $1 package"
+	cd $CURRENT_DIR
+	testError "Unable to change folder"
+}
+
+exitOk ()
+{
+	IFS=$OLD_IFS
+	exit 0
+}
+
+exitFail()
+{
+	IFS=$OLD_IFS
+	echo $1
+	exit 1
+}

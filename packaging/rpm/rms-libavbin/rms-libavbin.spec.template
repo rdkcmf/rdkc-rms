@@ -1,0 +1,19 @@
+Name:		__PACKAGE_NAME__
+Version:	__VERSION__
+Release:	1%{?dist}
+Summary:	__SUMMARY__
+Group:		Networking/Daemons
+License:	License
+URL:		http://www.comcast.com
+BuildRoot:	%{_tmppath}
+Packager:	RMS_PACKAGE
+
+%description
+__DESCRIPTION__
+
+%install
+mkdir -p $RPM_BUILD_ROOT
+cp -r $RMS_DIST_FOLDER/* $RPM_BUILD_ROOT/
+
+%files
+%defattr(-,root,root,-)

@@ -1,0 +1,108 @@
+#!/bin/sh
+##########################################################################
+# If not stated otherwise in this file or this component's LICENSE
+# file the following copyright and licenses apply:
+#
+# Copyright 2019 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#########################################################################
+. /etc/rc.subr
+
+name=rdkcms
+rcvar=rdkcms_enable
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+console_cmd="${name}_console"
+check_cmd="${name}_check"
+version_cmd="${name}_version"
+
+binary=/usr/local/bin/rdkcms
+configfile=/usr/local/etc/rdkcms/config.lua
+license=/usr/local/etc/rdkcms/License.lic
+pid=/var/run/rdkcms/rdkcms.pid
+
+required_files=$configfile
+
+load_rc_config $name
+: ${rdkcms_enable:=NO}
+
+rdkcms_version()
+{
+	$binary --version
+}
+
+rdkcms_check()
+{
+	WANTED=`id -u root`
+	CURRENT_USERNAME=`whoami`
+	GOT=`id -u $CURRENT_USERNAME`
+	if [ "$WANTED" -ne "$GOT" ]
+	then
+		echo "This script must be run as root"
+		exit 1
+	fi
+
+	if [ ! -f $license ]
+	then
+		echo "License file absent. It should be here: $license"
+		exit 1
+	fi
+}
+
+rdkcms_start()
+{
+	rdkcms_check
+	if [ "`ps ax|grep $binary|grep -v grep|wc -l|sed 's/[ \\t]//g'`" != "0" ]
+	then
+		echo "RDKC Media Server already running"
+		exit 0
+	fi
+	$binary \
+		--daemon \
+		--uid=`id -u rmsd` \
+		--gid=`id -g rmsd` \
+		--pid=$pid \
+		$configfile
+}
+
+rdkcms_stop()
+{
+	killall -TERM rdkcms
+	sleep 1
+	if [ "`ps ax|grep $binary|grep -v grep|wc -l|sed 's/[ \\t]//g'`" != "0" ]
+	then
+		sleep 5
+		killall -9 rdkcms
+		if [ "`ps ax|grep $binary|grep -v grep|wc -l|sed 's/[ \\t]//g'`" != "0" ]
+		then
+			echo "RDKC Media Server could not be stopped"
+			exit 1
+		fi
+	fi
+}
+
+rdkcms_console()
+{
+	rdkcms_check
+	rdkcms_stop
+	$binary \
+		--uid=`id -u rmsd` \
+		--gid=`id -g rmsd` \
+		--pid=$pid \
+		$configfile
+}
+
+extra_commands="console check version"
+run_rc_command "$1"

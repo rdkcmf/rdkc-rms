@@ -1,0 +1,2 @@
+Provides access to RDKC Software Repository. Needed by package managers
+like apt (deb based) and yum (rpm based)
