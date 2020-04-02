@@ -19,7 +19,7 @@
 <environment>
   <components>
     <rms>
-      <dependencies>sdk,rdklogger,configMgr,openssl,sysapps</dependencies>
+      <dependencies>sdk,rdklogger,configMgr,openssl,sysapps,libsyswrapper</dependencies>
     </rms>
   </components>
 </environment>

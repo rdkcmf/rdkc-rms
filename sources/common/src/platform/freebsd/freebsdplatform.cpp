@@ -21,6 +21,11 @@
 
 #ifdef FREEBSD
 #include "common.h"
+extern "C"
+{
+#include "secure_wrapper.h"
+}
+
 
 string alowedCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 static map<int, SignalFnc> _signalHandlers;
@@ -817,7 +822,8 @@ bool copyFile(string src, string dst, bool overwrite) {
 		return false;
 	}
 	string cmd = "cp \"" + src + "\" \"" + dst + ".tmp\"";
-	if (system(cmd.c_str()) != 0) {
+	//if (system(cmd.c_str()) != 0) {
+          if (v_secure_system(("cp \"" + src + "\" \"" + dst + ".tmp\"")) != 0) {
 		FATAL("Unable to copy file from %s to %s", STR(src), STR(dst));
 		return false;
 	}
