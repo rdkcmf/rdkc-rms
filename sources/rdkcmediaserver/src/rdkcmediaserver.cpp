@@ -38,6 +38,10 @@
 #include "api3rdparty/apiprotocolhandler.h"
 #endif	/* HAS_PROTOCOL_API */
 
+#ifdef BREAKPAD
+#include "breakpadwrap.h"
+#endif
+
 #ifdef HAS_LICENSE
 #if defined HAS_APP_LMINTERFACE && defined HAS_APP_AXISLICENSEINTERFACE
 #error "Only one licensing app can be defined"
@@ -132,7 +136,15 @@ extern "C" BaseClientApplication *GetApplication_lminterface(Variant configurati
 #if (!defined ANDROID) && (!defined IOS)
 int main(int argc, const char **argv) {
 	//the very first thing we do, we install the crashdump handler
-	InstallCrashDumpHandler(NULL);
+	//InstallCrashDumpHandler(NULL);
+#ifdef BREAKPAD
+	sleep(1);
+	BreakPadWrapExceptionHandler eh;
+	eh = newBreakPadWrapExceptionHandler();
+	if(NULL != eh) {
+		INFO("Breakpad Initialized\n");
+	}
+#endif
 #else
 bool FromRDKCMS() {
 	return true;
