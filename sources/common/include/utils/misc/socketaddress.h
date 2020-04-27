@@ -24,6 +24,12 @@
 #ifndef _SOCKETADDRESS_H
 #define _SOCKETADDRESS_H
 
+#if defined ( RMS_PLATFORM_RPI )
+#include "platform/platform.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
+
 typedef union {
   struct sockaddr sa;
   struct sockaddr_in s4;

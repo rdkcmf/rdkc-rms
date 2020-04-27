@@ -42,8 +42,10 @@ extern "C" {
 
 #ifdef RDKC
 #include "sysUtils.h"
-#ifdef USE_MFRLIB
+#if defined ( USE_MFRLIB )
 #include "mfrApi.h"
+#elif defined ( RMS_PLATFORM_RPI )
+#define SC_MODEL_NAME "RPI"
 #else
 #include "sc_model.h"
 #endif
