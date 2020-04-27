@@ -22,6 +22,9 @@
 #ifdef HAS_PROTOCOL_API
 #include "utils/logging/apiloglocation.h"
 
+#if defined ( RMS_PLATFORM_RPI )
+#include "utils/logging/logging.h"
+#endif
 #define LOG_TAG "LOG.RDK.RMS"
 
 ApiLogLocation::ApiLogLocation(Variant &configuration) : BaseLogLocation(configuration) {
