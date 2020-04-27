@@ -22,6 +22,10 @@
 
 #include "utils/misc/socketaddress.h"
 
+#if defined ( RMS_PLATFORM_RPI )
+#include "utils/misc/format.h"
+#endif
+
 bool SocketAddress::_ipv6Supported = false;
 bool SocketAddress::_ipv6Only = false;
 
