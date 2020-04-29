@@ -508,6 +508,7 @@ bool WrtcConnection::SetStreamName(string streamName, bool useSrtp) {
 			//check first if there is an existing lazypull stream
 			BaseInStream *pInStream = RetrieveInStream(streamName, pSM);
 			if (pInStream != NULL) {
+				DEBUG("creating out stream in SetStreamName lazypull");
 				return CreateOutStream(streamName, pInStream, pSM);
 			}
 		}
@@ -543,6 +544,7 @@ bool WrtcConnection::SetStreamName(string streamName, bool useSrtp) {
 	} else {
 		BaseInStream *pInStream = RetrieveInStream(streamName, pSM);
 		if (pInStream != NULL) {
+			DEBUG("creating out stream in SetStreamName");
 			return CreateOutStream(streamName, pInStream, pSM);
 		}
 		
@@ -1637,9 +1639,11 @@ bool WrtcConnection::InitializeDataChannel() {
 	//TODO: We should be spawning dtls and sctp protocols using the factory
 	// But for now, let's just instantiate them ourselves
 	if (_isControlled) {
+		 DEBUG("_isControlled enabled....creating outbound dtls");
 		_pDtls = new OutboundDTLSProtocol();
 		settings["sctpClient"] = true;
 	} else {
+		DEBUG("_isControlled disabled....creating inbound dtls");
 		_pDtls = new InboundDTLSProtocol(_useSrtp);
 		settings["sctpClient"] = false;
 	}
@@ -2232,6 +2236,7 @@ void WrtcConnection::SignalEvent(string eventName, Variant &args) {
 			) {
 			if (_waiting) {
 				string streamName = args.GetValue("streamName", false);
+				DEBUG("creating out stream in updatePendingStream event");
 				CreateOutStream(streamName, _pPendingInStream, pSM);
 				_waiting = false;
 				_pendingFlag = 0;

@@ -158,18 +158,13 @@ bool IceTcpProtocol::SignalInputData(IOBuffer &buffer) {
 	//TODO: for now, this is directly linked to the TURN server
 
 	// first see if it is a Stun Message
-	if (StunMsg::IsStun(buffer)) {
+	if (StunMsg::IsStun(buffer) &&  StunMsg::IsValidStunType(buffer) ) {
 		//UPDATE: loop through the messages in case that it is a combination
 		// of responses
 		do {
 			// create a StunMsg object!
 			StunMsg * pMsg = StunMsg::ParseBuffer(buffer, _turnServerIpStr);
 			int type = pMsg->GetType();
-//#ifdef WEBRTC_DEBUG
-			DEBUG("[ICE-TCP] StunMsg parsed type: 0x%x, %d bytes",
-					type, pMsg->GetMessageLen()); //
-//#endif
-
 			int err = pMsg->GetErrorCodeAttr();
 			HandleServerMsg(pMsg, type, err, buffer);
 

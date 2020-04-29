@@ -23,6 +23,38 @@
 #include "utils/misc/crypto.h"
 
 // static method
+bool StunMsg::IsValidStunType(IOBuffer & buf) {
+	uint8_t * pBuf = GETIBPOINTER(buf);
+	stunHeaderBytes_t * pH = (stunHeaderBytes_t *)pBuf;
+	uint16_t stuntype = (pH->typeHi << 8) + pH->typeLo;
+	switch (stuntype) {
+		case STUN_DATA_INDICATION:  //= 0x0017,
+		case STUN_SEND_INDICATION:  //= 0x0016,
+		case STUN_BINDING_REQUEST:  //= 0x0001,
+		case STUN_ALLOCATE_REQUEST:  //= 0x0003,
+		case STUN_REFRESH_REQUEST:  //= 0x0004,
+		case STUN_CHANNEL_BIND_REQUEST:  //= 0x0009,
+		case STUN_SHARED_SECRET_REQUEST:  //= 0x0002,
+		case STUN_CREATE_PERM_REQUEST:  //= 0x0008,
+		case STUN_BINDING_INDICATION:  //= 0x0011,
+		case STUN_BINDING_RESPONSE:  //= 0x0101,
+		case STUN_SHARED_SECRET_RESPONSE:  //= 0x0102,
+		case STUN_ALLOCATE_RESPONSE:  //= 0x0103,
+		case STUN_REFRESH_RESPONSE:  //= 0x0104,
+		case STUN_CREATE_PERM_RESPONSE:  //= 0x0108,
+		case STUN_CHANNEL_BIND_RESPONSE:  //= 0x0109,
+		case STUN_ALLOCATE_ERROR_RESPONSE:  //= 0x0113,
+		case STUN_SHARED_SECRET_ERROR_RESPONSE:  //= 0x0112,
+		case STUN_REFRESH_ERROR_RESPONSE:  //= 0x0114,
+		case STUN_CREATE_PERM_ERROR_RESPONSE:  //= 0x0118,
+		case STUN_BINDING_ERROR_RESPONSE:  //= 0x0111,
+		case STUN_CHANNEL_BIND_ERROR_RESPONSE:  //= 0x0119
+			return true;
+		default:
+			return false;
+	}
+}
+// static method
 bool StunMsg::IsStun(IOBuffer & buf) {
 	uint32_t len = GETAVAILABLEBYTESCOUNT(buf);
 	uint8_t * pBuf = GETIBPOINTER(buf);

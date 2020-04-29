@@ -36,6 +36,7 @@ public:
 	static bool IsStun(IOBuffer & buf);
 	static bool IsStun(uint8_t * pBuf, uint32_t len);
 	static StunMsg * ParseBuffer(IOBuffer & buf, string & fromIpStr);
+	static bool IsValidStunType(IOBuffer & buf);
 	
 	static const int STUN_HEADER_LEN = 20; // STUN header size
 	
