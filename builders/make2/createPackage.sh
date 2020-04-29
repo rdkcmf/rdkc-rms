@@ -82,19 +82,19 @@ echo "-----------------------------"
 
 
 # 1. compile the binary
-	if [ "$DO_CLEANUP" = "yes" ]
-	then
-		(
-			cd $ROOT_FOLDER/builders/make2 && \
-			sh crossmake.sh clean
-		)
-		testError "cleanup before compile failed";
-	fi
-	(
-		cd $ROOT_FOLDER/builders/make2 && 
-		sh crossmake.sh $1
-	)
-	testError "compiling failed"
+    if [ "$DO_CLEANUP" = "yes" ]
+    then
+        (
+            cd $ROOT_FOLDER/builders/make2 && \
+            sh crossmake.sh clean
+        )
+        testError "cleanup before compile failed";
+    fi
+    (
+        cd $ROOT_FOLDER/builders/make2 && 
+        sh crossmake.sh $1
+    )
+    testError "compiling failed"
 
 # 2. Perform the tests
 #    Cant when cross compiling
@@ -115,51 +115,52 @@ copyFiles $ROOT_FOLDER/dist_template/config ./dist/$DIST_NAME/
 copyFiles $ROOT_FOLDER/dist_template/demo ./dist/$DIST_NAME/
 copyFiles $ROOT_FOLDER/dist_template/documents/README.txt ./dist/$DIST_NAME/
 #copyFiles $ROOT_FOLDER/dist_template/rms-avconv/presets ./dist/$DIST_NAME/rms-avconv-presets
-	copyFiles $ROOT_FOLDER/builders/make2/output/static/rdkcmediaserver ./dist/$DIST_NAME/bin/rdkcms
-	copyFiles $ROOT_FOLDER/builders/make2/output/static/tests ./dist/$DIST_NAME/bin/platformTests
-	copyFiles $ROOT_FOLDER/builders/make2/output/static/mp4writer ./dist/$DIST_NAME/bin/rms-mp4writer
-	#copyFiles $ROOT_FOLDER/builders/cmake/webserver/rms-webserver ./dist/$DIST_NAME/bin/rms-webserver
-	#copyFiles $ROOT_FOLDER/3rdparty/webserver/linux/bin/php-cgi ./dist/$DIST_NAME/bin/rms-phpengine
-	#copyFiles $ROOT_FOLDER/websources/access_policy/clientaccesspolicy.xml ./dist/$DIST_NAME/rms-webroot/clientaccesspolicy.xml
-	#copyFiles $ROOT_FOLDER/websources/access_policy/crossdomain.xml ./dist/$DIST_NAME/rms-webroot/crossdomain.xml
-	#copyFiles $ROOT_FOLDER/websources/web_ui/ ./dist/$DIST_NAME/rms-webroot/RMS_Web_UI/
-	#copyFiles $ROOT_FOLDER/websources/rmswebservices ./dist/$DIST_NAME/rms-webroot/
-	#copyFiles $ROOT_FOLDER/websources/demo ./dist/$DIST_NAME/rms-webroot
+    copyFiles $ROOT_FOLDER/builders/make2/output/static/rdkcmediaserver.full ./dist/$DIST_NAME/bin/rdkcms_debug
+    copyFiles $ROOT_FOLDER/builders/make2/output/static/rdkcmediaserver ./dist/$DIST_NAME/bin/rdkcms
+    copyFiles $ROOT_FOLDER/builders/make2/output/static/tests ./dist/$DIST_NAME/bin/platformTests
+    copyFiles $ROOT_FOLDER/builders/make2/output/static/mp4writer ./dist/$DIST_NAME/bin/rms-mp4writer
+    #copyFiles $ROOT_FOLDER/builders/cmake/webserver/rms-webserver ./dist/$DIST_NAME/bin/rms-webserver
+    #copyFiles $ROOT_FOLDER/3rdparty/webserver/linux/bin/php-cgi ./dist/$DIST_NAME/bin/rms-phpengine
+    #copyFiles $ROOT_FOLDER/websources/access_policy/clientaccesspolicy.xml ./dist/$DIST_NAME/rms-webroot/clientaccesspolicy.xml
+    #copyFiles $ROOT_FOLDER/websources/access_policy/crossdomain.xml ./dist/$DIST_NAME/rms-webroot/crossdomain.xml
+    #copyFiles $ROOT_FOLDER/websources/web_ui/ ./dist/$DIST_NAME/rms-webroot/RMS_Web_UI/
+    #copyFiles $ROOT_FOLDER/websources/rmswebservices ./dist/$DIST_NAME/rms-webroot/
+    #copyFiles $ROOT_FOLDER/websources/demo ./dist/$DIST_NAME/rms-webroot
 
 cat $ROOT_FOLDER/dist_template/config/config.lua \
-	| sed "s/__STANDARD_LOG_FILE_APPENDER__/..\/logs\/rms/" \
-	| sed "s/__STANDARD_MEDIA_FOLDER__/..\/media/" \
-	| sed "s/__STANDARD_CONFIG_PERSISTANCE_FILE__/..\/config\/pushPullSetup.xml/" \
-	| sed "s/__STANDARD_AUTH_PERSISTANCE_FILE__/..\/config\/auth.xml/" \
-	| sed "s/__STANDARD_CONN_LIMITS_PERSISTANCE_FILE__/..\/config\/connlimits.xml/" \
-	| sed "s/__STANDARD_BW_LIMITS_PERSISTANCE_FILE__/..\/config\/bandwidthlimits.xml/" \
-	| sed "s/__STANDARD_INGEST_POINTS_PERSISTANCE_FILE__/..\/config\/ingestpoints.xml/" \
-	| sed "s/__STANDARD_AUTO_DASH_FOLDER__/..\/rms-webroot/" \
-	| sed "s/__STANDARD_AUTO_HLS_FOLDER__/..\/rms-webroot/" \
-	| sed "s/__STANDARD_AUTO_HDS_FOLDER__/..\/rms-webroot/" \
-	| sed "s/__STANDARD_AUTO_MSS_FOLDER__/..\/rms-webroot/" \
-	| sed "s/__STANDARD_RTMP_USERS_FILE__/..\/config\/users.lua/" \
-	| sed "s/__STANDARD_RTSP_USERS_FILE__/..\/config\/users.lua/" \
-	| sed "s/__STANDARD_EVENT_FILE_APPENDER__/..\/logs\/events.txt/" \
-	| sed "s/__STANDARD_TRANSCODER_SCRIPT__/.\/rmsTranscoder.sh/" \
-	| sed "s/__STANDARD_MP4WRITER_BIN__/.\/rms-mp4writer/" \
-	| sed "s/__STANDARD_SERVERKEY_FILE__/..\/config\/server.key/" \
-	| sed "s/__STANDARD_SERVERCERT_FILE__/..\/config\/server.cert/" \
-	| sed "/--\[\[remove/,/remove\]\]--/ d" \
-	>./dist/$DIST_NAME/config/config.lua
+    | sed "s/__STANDARD_LOG_FILE_APPENDER__/..\/logs\/rms/" \
+    | sed "s/__STANDARD_MEDIA_FOLDER__/..\/media/" \
+    | sed "s/__STANDARD_CONFIG_PERSISTANCE_FILE__/..\/config\/pushPullSetup.xml/" \
+    | sed "s/__STANDARD_AUTH_PERSISTANCE_FILE__/..\/config\/auth.xml/" \
+    | sed "s/__STANDARD_CONN_LIMITS_PERSISTANCE_FILE__/..\/config\/connlimits.xml/" \
+    | sed "s/__STANDARD_BW_LIMITS_PERSISTANCE_FILE__/..\/config\/bandwidthlimits.xml/" \
+    | sed "s/__STANDARD_INGEST_POINTS_PERSISTANCE_FILE__/..\/config\/ingestpoints.xml/" \
+    | sed "s/__STANDARD_AUTO_DASH_FOLDER__/..\/rms-webroot/" \
+    | sed "s/__STANDARD_AUTO_HLS_FOLDER__/..\/rms-webroot/" \
+    | sed "s/__STANDARD_AUTO_HDS_FOLDER__/..\/rms-webroot/" \
+    | sed "s/__STANDARD_AUTO_MSS_FOLDER__/..\/rms-webroot/" \
+    | sed "s/__STANDARD_RTMP_USERS_FILE__/..\/config\/users.lua/" \
+    | sed "s/__STANDARD_RTSP_USERS_FILE__/..\/config\/users.lua/" \
+    | sed "s/__STANDARD_EVENT_FILE_APPENDER__/..\/logs\/events.txt/" \
+    | sed "s/__STANDARD_TRANSCODER_SCRIPT__/.\/rmsTranscoder.sh/" \
+    | sed "s/__STANDARD_MP4WRITER_BIN__/.\/rms-mp4writer/" \
+    | sed "s/__STANDARD_SERVERKEY_FILE__/..\/config\/server.key/" \
+    | sed "s/__STANDARD_SERVERCERT_FILE__/..\/config\/server.cert/" \
+    | sed "/--\[\[remove/,/remove\]\]--/ d" \
+    >./dist/$DIST_NAME/config/config.lua
 cat $ROOT_FOLDER/dist_template/config/webconfig.lua \
-	| sed "s/__STANDARD_WEBSERVER_LOG_FILE_APPENDER__/..\/logs\/rms-webserver/" \
-	| sed "s/__STANDARD_WHITELIST_FILE__/..\/config\/whitelist.txt/" \
-	| sed "s/__STANDARD_BLACKLIST_FILE__/..\/config\/blacklist.txt/" \
-	| sed "s/__STANDARD_SERVERKEY_FILE__/..\/config\/server.key/" \
-	| sed "s/__STANDARD_SERVERCERT_FILE__/..\/config\/server.cert/" \
-	| sed "s/__STANDARD_WEBROOT_FOLDER__/..\/rms-webroot/" \
-	| sed "/--\[\[remove/,/remove\]\]--/ d" \
-	>./dist/$DIST_NAME/config/webconfig.lua
+    | sed "s/__STANDARD_WEBSERVER_LOG_FILE_APPENDER__/..\/logs\/rms-webserver/" \
+    | sed "s/__STANDARD_WHITELIST_FILE__/..\/config\/whitelist.txt/" \
+    | sed "s/__STANDARD_BLACKLIST_FILE__/..\/config\/blacklist.txt/" \
+    | sed "s/__STANDARD_SERVERKEY_FILE__/..\/config\/server.key/" \
+    | sed "s/__STANDARD_SERVERCERT_FILE__/..\/config\/server.cert/" \
+    | sed "s/__STANDARD_WEBROOT_FOLDER__/..\/rms-webroot/" \
+    | sed "/--\[\[remove/,/remove\]\]--/ d" \
+    >./dist/$DIST_NAME/config/webconfig.lua
 cat $ROOT_FOLDER/dist_template/scripts/unix/rmsTranscoder.sh \
-	| sed "s/__RMS_AVCONV_BIN__/.\/rms-avconv/" \
-	| sed "s/__RMS_AVCONV_PRESETS__/..\/rms-avconv-presets/" \
-	> ./dist/$DIST_NAME/bin/rmsTranscoder.sh
+    | sed "s/__RMS_AVCONV_BIN__/.\/rms-avconv/" \
+    | sed "s/__RMS_AVCONV_PRESETS__/..\/rms-avconv-presets/" \
+    > ./dist/$DIST_NAME/bin/rmsTranscoder.sh
 chmod +x ./dist/$DIST_NAME/bin/rmsTranscoder.sh
 testError "chmod +x ./dist/$DIST_NAME/bin/rmsTranscoder.sh"
 #Avig requested build info:
@@ -175,9 +176,9 @@ rm -rf ./dist/$DIST_NAME/config/License.lic
 
 # 6. gzip it
 (
-	cd ./dist && \
-	# --force-local to treat as local file, or will treat call to http(s)
-	tar czf $DIST_NAME.tar.gz $DIST_NAME --force-local
+    cd ./dist && \
+    # --force-local to treat as local file, or will treat call to http(s)
+    tar czf $DIST_NAME.tar.gz $DIST_NAME --force-local
 )
 testError "tar failed"
 

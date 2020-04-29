@@ -524,27 +524,39 @@ bool BaseIceProtocol::SignalInputData(IOBuffer &buffer) {
 }
 
 bool BaseIceProtocol::EnqueueForOutbound() {
-	if (_pNearProtocol == NULL) return true;
+	bool ret = false;
+
+	if (_pNearProtocol == NULL) {
+		return true;
+	}
 
 	// Get the output buffer of the top protocol, in this case, DTLS
 	IOBuffer *pBuffer = _pNearProtocol->GetOutputBuffer();
-	uint8_t *pData = GETIBPOINTER(*pBuffer);
-	uint32_t length = GETAVAILABLEBYTESCOUNT(*pBuffer);
-	bool ret = false;
-
-	if (_bestCan) {
-		// We have pierced our peer's NAT, send direct!!
-		//ret = SendToV4(_bestIp, _bestPort, pData, length);
-		//TODO: sanity check in case bestAddress is invalid
-		ret = SendTo(_bestAddress.getIPv4(), _bestAddress.getSockPort(), pData, length);
-	} else if (_turnBestCan) {
-		// We have to bounce off to the relay
-		ret = SendDataToTurnCandidate(pData, length, _turnBestCan);
+	if( NULL != pBuffer ) {
+		uint8_t *pData = GETIBPOINTER(*pBuffer);
+		if ( NULL != pData ) {
+			uint32_t length = GETAVAILABLEBYTESCOUNT(*pBuffer);
+			if ( length > 0 ) {
+				if (_bestCan) {
+					// We have pierced our peer's NAT, send direct!!
+					//ret = SendToV4(_bestIp, _bestPort, pData, length);
+					//TODO: sanity check in case bestAddress is invalid
+					ret = SendTo(_bestAddress.getIPv4(), _bestAddress.getSockPort(), pData, length);
+				} else if (_turnBestCan) {
+					// We have to bounce off to the relay
+					ret = SendDataToTurnCandidate(pData, length, _turnBestCan);
+				}
+			} else {
+				WARN("[BaseIceEnqueueForOutbound] : Empty IOBuffer");
+			}
+		} else {
+			WARN("[BaseIceEnqueueForOutbound] : Invalid IOBuffer data");
+		}
+		// Clear the contents of the buffer after sending
+		pBuffer->IgnoreAll();
+	} else {
+		WARN("[BaseIceEnqueueForOutbound] : Invalid IOBuffer Object");
 	}
-
-	// Clear the contents of the buffer after sending
-	pBuffer->IgnoreAll();
-
 	return ret;
 }
 
