@@ -61,7 +61,7 @@ public:
 
 	inline LinkedListNode<K, V> * AddHead(const K &key, const V &value) {
 		if (MAP_HAS1(_allNodes, key)) {
-#if !defined ( ANDROID ) && !defined ( RMS_PLATFORM_RPI)
+#ifndef ANDROID
 			ASSERT("Item already present inside the list");
 #endif
 			return NULL;
@@ -81,7 +81,7 @@ public:
 
 	inline LinkedListNode<K, V> * AddTail(const K &key, const V &value) {
 		if (MAP_HAS1(_allNodes, key)) {
-#if !defined ( ANDROID ) && !defined ( RMS_PLATFORM_RPI )
+#ifndef ANDROID
 			ASSERT("Item already present inside the list");
 #endif
 			return NULL;

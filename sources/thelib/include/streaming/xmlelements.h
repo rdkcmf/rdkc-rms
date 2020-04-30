@@ -27,10 +27,6 @@
 #include "common.h"
 #endif
 
-#if defined ( RMS_PLATFORM_RPI )
-#include "common.h"
-#endif
-
 /**
  * XmlElemets class is responsible for representing each xml element on the
  * manifest file. This class gets intantiated for each xml element/field and

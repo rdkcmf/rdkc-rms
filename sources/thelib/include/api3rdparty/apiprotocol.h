@@ -104,7 +104,6 @@ private:
 
         camera_resource_config_t *conf;
 
-#ifndef SDK_DISABLED
         /* soxr parameters */
         soxr_error_t error;
         soxr_t _soxr;
@@ -116,7 +115,6 @@ private:
         soxr_quality_spec_t qt_spec;
 	// runtime specification regarding number of allowed threads
 	soxr_runtime_spec_t rt_spec;
-#endif
 };
 
 #endif	/* _APIPROTOCOL_H */
