@@ -268,11 +268,9 @@ void InNetRawStream::SetAudioConfig(uint64_t type, uint8_t *pConfigData, uint32_
 		case CODEC_AUDIO_AAC:
 			_streamCaps.AddTrackAudioAAC(pConfigData, dataLength, true, this);
 			break;
-#ifdef HAS_G711
 		case CODEC_AUDIO_G711:
 			_streamCaps.AddTrackAudioG711((bool)pConfigData[0], this);
 			break;
-#endif
 		default:
 			FATAL("Invalid audio codec type!");
 			break;

@@ -26,10 +26,6 @@
 #include "threading/threading.h"
 #include <sys/stat.h>
 
-#ifdef RMS_PLATFORM_RPI
-#include "api3rdparty/gst_rmsframe.h"
-#endif
-
 #define DUMP_G711 0
 
 #define DUMP_PCM 0
@@ -42,8 +38,6 @@ FILE *g711Fd;
 FILE *pcmFd;
 #endif
 
-static int is_gst_enabled = RDKC_FAILURE;
-
 RdkCPluginFactory* ApiProtocol::plugin_factory;
 RdkCVideoCapturer* ApiProtocol::recorder;
 
@@ -51,10 +45,8 @@ ApiProtocol::ApiProtocol() : BaseProtocol(PT_API_INTEGRATION) {
 	_streamId = 0;
 	_streamFd = 0;
 	_pIoHandler = NULL;
-#if !defined ( RMS_PLATFORM_RPI )
 	_soxr = NULL;
         is_soxr_initialized = false;
-#endif /* RMS_PLATFORM_RPI */
 #ifdef HAS_THREAD
 	_feeding = false;
 #endif /* HAS_THREAD */
@@ -67,7 +59,6 @@ ApiProtocol::~ApiProtocol() {
 bool ApiProtocol::Initialize(Variant &config) {
 
         int ret = true;
-#if !defined ( RMS_PLATFORM_RPI )
         conf = new camera_resource_config_t;
         plugin_factory = CreatePluginFactoryInstance();
         if( NULL == plugin_factory ) {
@@ -84,7 +75,6 @@ bool ApiProtocol::Initialize(Variant &config) {
             }
         }
 	INFO("%s(%d): Recoder is created successfully",  __FILE__, __LINE__);
-#endif
 	return ret;
 }
 
@@ -101,7 +91,7 @@ void ApiProtocol::SetIOHandler(IOHandler *pIOHandler) {
 	_pIoHandler = pIOHandler;
 }
 
-#if !defined ( RMS_PLATFORM_RPI )
+
 /* Initialize Sound Exchange Resampler */
 void ApiProtocol::InitializeSoXR() {
 
@@ -151,7 +141,6 @@ void ApiProtocol::InitializeSoXR() {
 
 
 }
-#endif/* RMS_PLATFORM_RPI */
 
 bool ApiProtocol::InitializeApi(Variant &config) {
 	_streamId = (uint32_t) config["apiStreamProfileId"];
@@ -160,14 +149,6 @@ bool ApiProtocol::InitializeApi(Variant &config) {
 	bool force_audio_config =  false;
 
 	FINEST("API initialized with: %s", STR(config.ToString()));
-
-#ifdef RMS_PLATFORM_RPI
-       //is_gst_enabled = IsGSTEnabledInRFC( (char*)RFC_RMS, (char*)GST_FLAG );
-       is_gst_enabled = RDKC_SUCCESS;
-#endif/* RMS_PLATFORM_RPI */
-
-       if( is_gst_enabled != RDKC_SUCCESS )
-        {
 
 	// Initialize the inbound stream, set the defaults
 #ifndef SDK_DISABLED
@@ -319,20 +300,6 @@ bool ApiProtocol::InitializeApi(Variant &config) {
 #endif
 
 #endif /* SDK_DISABLED */
-       }
-       else //GST is enabled in RFC
-        {
-#ifdef RMS_PLATFORM_RPI
-                _streamFd = gst_InitFrame ( GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO );
-                if(_streamFd < 0)
-                {
-                        INFO("GST Frame Init FAILED!\n");
-                        return false;
-                }
-                INFO("gst_InitFrame SUCCESS: AppNameVideo=%s, AppNameAudio=%s\n", GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO);
-#endif
-        }
-
 	// Set stream config
 	if (!SetStreamConfig()) {
 		FATAL("Stream config could not be set!");
@@ -363,9 +330,6 @@ bool ApiProtocol::InitializeApi(Variant &config) {
 
 bool ApiProtocol::UpdateStreamConfig(Variant &config) {
 
-#if !defined ( RMS_PLATFORM_RPI )
-       if( is_gst_enabled != RDKC_SUCCESS )
-        {
 	Variant videoConfig  = config["videoconfig"];
         INFO("UpdateStreamConfig : API initialized with video config : %s", STR(videoConfig.ToString()));
 
@@ -494,15 +458,7 @@ bool ApiProtocol::UpdateStreamConfig(Variant &config) {
 	INFO("quality_type=%" PRIu32, vidConfig.quality_type);
 	INFO("quality_level=%" PRIu32, vidConfig.quality_level);
 	INFO("bit_rate=%" PRIu32, vidConfig.bit_rate);*/
-       }
-       else
-        {
-#ifdef RMS_PLATFORM_RPI
-                // GST Set stream config here
-#endif
-        }
 
-#endif
 	return true;
 }
 
@@ -514,8 +470,6 @@ bool ApiProtocol::Terminate() {
 		delete pIoHandler;
 	}
 
-       if( is_gst_enabled != RDKC_SUCCESS )
-        {
 #ifndef SDK_DISABLED
 	if (_streamFd > 0) {
 		INFO("Invoking rdkc_stream_close");
@@ -554,23 +508,10 @@ bool ApiProtocol::Terminate() {
 #endif
 
 #endif /* SDK_DISABLED */
-       }
-       else
-       {
-#ifdef RMS_PLATFORM_RPI
-                INFO("Invoking gst_TerminateFrame AppNameVideo=%s, AppNameAudio=%s\n", GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO);
-                gst_TerminateFrame( GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO );
-#endif
-       }
 	return true;
 }
 
 bool ApiProtocol::FeedData() {
-        static bool frameDebug(false);
-        static uint32_t framecount(0);
-        if( is_gst_enabled != RDKC_SUCCESS )
-        {
-
 #ifndef SDK_DISABLED
 
 	static bool once(true);
@@ -672,48 +613,6 @@ bool ApiProtocol::FeedData() {
 		return false;
 	}
 #endif /* SDK_DISABLED */
-       }
-       else //GST is enabled in RFC
-        {
-#ifdef RMS_PLATFORM_RPI
-                GST_FrameInfo frame_info;
-                int retVal = gst_ReadFrameData ( &frame_info );
-                if (retVal == 0) {
-
-                        if( frameDebug && (framecount++%30 == 0)) INFO("FRAME: streamid=%d, type=%d, size=%d, width=%d, height=%d, timestamp=0x%llx, frame_ptr=0x%x\n",frame_info.stream_id, frame_info.stream_type, frame_info.frame_size, frame_info.width, frame_info.height, frame_info.frame_timestamp, frame_info.frame_ptr);
-
-                        // Set the header as payload type (0x00)
-                        uint8_t header = 0x00;
-                        if (frame_info.stream_type == 1) {
-                                // h264 frame, header is as-is
-                        } else if ((frame_info.stream_type == 3) || (frame_info.stream_type == 10)) {
-                                header = 0x01; // audio frame
-                        } else {
-                                WARN("Not supported stream type: %" PRIu8, header);
-                                return true;
-                        }
-
-
-                        // Form the header and actual payload
-                        uint32_t length = frame_info.frame_size + 9; // length is frame size + header and timestamp
-                        _outputBuffer.ReadFromU32(length, true); // set the payload length
-                        _outputBuffer.ReadFromByte(header); // payload type header
-                        _outputBuffer.ReadFromU64(((uint64_t)frame_info.frame_timestamp * 1000), true);
-                        _outputBuffer.ReadFromBuffer((uint8_t *) frame_info.frame_ptr, frame_info.frame_size);
-                        deleteBuffer();
-                        return _pNearProtocol->SignalInputData(_outputBuffer);
-                } else if (retVal == 1) {
-                        static uint32_t notreadycount(0);
-                        if( frameDebug && (notreadycount++%10 == 0)) INFO("No frame ready. ReturnVal: %d", retVal);
-                } else {
-                        static uint32_t failcount(0);
-                        if( frameDebug && (failcount++%10 == 0)) INFO("rdkc_stream_read_frame failed! ReturnVal: %d", retVal);
-                        EnqueueForDelete(); // do a clean-up in case of read frame failure
-                        return false;
-                }
-#endif
-        }
-
 	return true;
 }
 

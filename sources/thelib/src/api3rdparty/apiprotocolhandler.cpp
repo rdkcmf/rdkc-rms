@@ -27,10 +27,6 @@
 #include "application/clientapplicationmanager.h"
 #include "threading/threading.h"
 
-#if defined ( RMS_PLATFORM_RPI )
-#define MAX_STREAM_ID           0x20
-#endif
-
 ApiProtocolHandler::ApiProtocolHandler(Variant &configuration) : BaseAppProtocolHandler(configuration) {
 	
 }
