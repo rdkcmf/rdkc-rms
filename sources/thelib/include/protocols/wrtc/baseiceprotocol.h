@@ -135,6 +135,7 @@ protected:
 	int _canSendRetries;
 	int _pierceRetries;
 	int _maxRetries;
+	int _maxRetriesLimit;
 	int _connDownCounter;
 
 	int _chromePeerBindRetries;	//
