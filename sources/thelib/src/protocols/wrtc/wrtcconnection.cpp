@@ -117,6 +117,7 @@ WrtcConnection::WrtcConnection()
 #endif // WRTC_CAPAB_HAS_HEARTBEAT
 
 	_checkHSState = false;
+	_dtlsState = -1;
 
 	RTCPReceiver::ResetNackStats();
 
@@ -183,6 +184,7 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 #endif // WRTC_CAPAB_HAS_HEARTBEAT
 
 	 _checkHSState = false;
+	_dtlsState = -1;
 
 	 RTCPReceiver::ResetNackStats();
 }
@@ -325,6 +327,9 @@ WrtcConnection::~WrtcConnection() {
 					PRIx8", %"PRId64", %"PRId64", %"PRId64", %"PRId64", %"PRIu32", %"PRIu32"", STR(_clientId),
 						videoProfile, bytesCount, droppedBytesCount, packetsCount, droppedPacketsCount, nackStats.pRequested, nackStats.pTransmitted);
 
+			/* Nact stats */
+			INFO("Nack Stats: %"PRIu32",%"PRIu32"", nackStats.pRequested, nackStats.pTransmitted);
+
 			// Audio info of the session
                         bytesCount = stats["audio"]["bytesCount"];
                         droppedBytesCount = stats["audio"]["droppedBytesCount"];
@@ -334,6 +339,21 @@ WrtcConnection::~WrtcConnection() {
 			/* Audio Session: { <Player Client ID>, <Bytes Sent>, <Bytes Dropped>, <Packets Sent>, <Packets Dropped> } */
 			INFO("Audio Session:%s,%"
 					PRId64",%"PRId64",%"PRId64",%"PRId64"", STR(_clientId), bytesCount, droppedBytesCount, packetsCount, droppedPacketsCount);
+
+			/* DTLS HS logging */
+			if(_dtlsState == 1) {
+				INFO("RMS DTLS handshake success");
+				INFO("DTLS stats: %"PRId8"", _dtlsState);
+			}
+			else if (_dtlsState != -1) {
+				INFO("RMS DTLS handshake failed");
+				INFO("DTLS stats: %"PRId8"", _dtlsState);
+			}
+			else if (_dtlsState == -1) {
+				INFO("RMS DTLS handshake not started");
+				INFO("DTLS stats: %"PRId8"", _dtlsState);
+			}
+
 		}
 
 		// Use the session counter to report the instances
@@ -1034,11 +1054,11 @@ bool WrtcConnection::SlowTick() {
 	}
 
 	if(_pDtls && _checkHSState) {
-		int8_t dtlsState = _pDtls->GetHandshakeState();
-		INFO("The current state of DTLS handshake is %d", dtlsState);
+		_dtlsState = _pDtls->GetHandshakeState();
+		INFO("The current state of DTLS handshake is %d", _dtlsState);
 
 		// No need to check the state once handshake has been successfully completed
-		if(dtlsState == 1) {
+		if(_dtlsState == 1) {
 			_checkHSState = false;
 		}
 	}
