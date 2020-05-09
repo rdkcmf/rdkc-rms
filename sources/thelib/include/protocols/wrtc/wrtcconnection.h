@@ -281,7 +281,7 @@ private:
 
 	// to check the state of ssl handshake
 	bool _checkHSState;
-
+	int8_t _dtlsState;
 	
 	uint8_t _slowTimerCounter;
 

@@ -481,6 +481,21 @@ bool WrtcSigProtocol::SignalInputData(IOBuffer &buffer) {
 //#ifdef WEBRTC_DEBUG
 			INFO("Wrtc Client Removed (left)");
 //#endif
+
+			// Log Peer state
+			if (_peerState != WRTC_PEER_CLOSED) {
+				INFO("The peer state is %s", STR(GetPeerState()));
+				INFO("Peer State Transition: %s-closed", STR(GetPeerState()));
+				SetPeerState(WRTC_PEER_CLOSED);
+			}
+
+			// Log ICE state
+			if (_iceState != WRTC_ICE_CLOSED) {
+				INFO("The ice state is %s", STR(GetIceState()));
+				INFO("Ice State Transition: %s-closed", STR(GetIceState()));
+				SetIceState(WRTC_ICE_CLOSED);
+			}
+
 			// We want the shutdown to be not permanent because we want to make
 			// sure that we always want to check if there is still an existing
 			// connection with RRS
