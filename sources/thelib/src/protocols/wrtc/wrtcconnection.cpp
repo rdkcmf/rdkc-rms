@@ -1761,7 +1761,7 @@ bool WrtcConnection::SignalDataChannelInput(uint32_t id, const uint8_t *pBuffer,
 }
 
 bool WrtcConnection::SignalDataChannelReady(uint32_t id) {
-
+	FINE("SignalDataChannelReady: %"PRIu32, id);
 	return true;
 }
 

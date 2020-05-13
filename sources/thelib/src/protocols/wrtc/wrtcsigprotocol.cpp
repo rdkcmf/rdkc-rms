@@ -514,7 +514,7 @@ bool WrtcSigProtocol::SignalInputData(IOBuffer &buffer) {
 			}
 			string rmsId = "";
 			if (GetJsonString(msg, "rmsid", rmsId)) {
-				INFO("RMS Client ID:%s", STR(rmsId));
+				INFO("RDKCMS Client ID:%s", STR(rmsId));
 				_pWrtc->SetRMSClientId(rmsId);
 			}
 
@@ -895,7 +895,7 @@ bool WrtcSigProtocol::SendJoin() {
 	char * fmt = (char *)"5:1+::{\"name\":\"join\",\"args\":[\"%s\",{\"index\":%"PRIu64",\"RMS\":true,\"rmsToken\":\"%s\",\"capabilities\":\"%s\"}]}";
 	string join = format(fmt, STR(_roomId), _rrsRoomIndex, STR(_rmsToken), STR(capabilities));
 
-	INFO("RMS joining the RRS with index parameter as %"PRIu64"", _rrsRoomIndex);
+	INFO("RDKCMS joining the RRS with index parameter as %"PRIu64"", _rrsRoomIndex);
 
 	return SendData(join, (char *)"Join Room");
 }
@@ -996,7 +996,7 @@ bool WrtcSigProtocol::WS_SendRequest() {
 		WrtcAppProtocolHandler *handler = (WrtcAppProtocolHandler *) (GetApplication()->GetProtocolHandler(PT_WRTC_SIG));
 		if (NULL != handler) {
 			if (handler->GetUserAgent(_userAgent)) {
-				INFO("User Agent forRMS->RRS connection is %s %s %s %s %s",
+				INFO("User Agent for RDKCMS->RRS connection is %s %s %s %s %s",
 					STR(_userAgent.deviceMake), STR(_userAgent.deviceModel), STR(_userAgent.fwVersion), STR(_userAgent.deviceMAC), STR(_userAgent.versionNo));
 				_hasUserAgent = true;
 			}
