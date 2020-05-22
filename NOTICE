@@ -37,7 +37,6 @@ Copyright (C) The Internet Society (2003). All Rights Reserved.
 
 Copyright (C) 2001 Steve Underwood
 code placed in the public domain for the benefit of all mankind
-
 Modifications for WebRtc, 2011/04/28, by tlegrand
 Copyright (c) 2011, The WebRTC project authors. All rights reserved.
 Licensed under the BSD-3 license
@@ -46,6 +45,6 @@ luaunit is Copyright (c) 2005-2018, Philippe Fremy <phil at freehackers dot org>
 Development by Philippe Fremy <phil@freehackers.org>
 Based on initial work of Ryu, Gwang (http://www.gpgstudy.com/gpgiki/LuaUnit)
 Licensed under the BSD-2 license
-=======
-Copyright (C) 2001 Steve Underwood
-code placed in the public domain for the benefit of all mankind
+
+COPYRIGHT (C) 1986 Gary S. Brown.  You may use this program, or
+code or tables extracted from it, as desired without restriction.
