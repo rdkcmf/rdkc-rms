@@ -26,7 +26,6 @@
 #include "protocols/wrtc/wrtcconnection.h"
 #include "netio/netio.h"
 
-const int MAX_RETRIES_LIMIT = 6; // max amount of retries limit, around 24s ( 6 * MAX_RETRIES(40) * 100ms per tick)
 const int MAX_RETRIES = 40; // max amount of retries, around 4s (40 * 100ms per tick)
 const int CANDIDATE_RETRIES = 20; // max amount of candidate pierce retry - 2s, not counting possible reset when new candidates arrive
 const int STUN_RETRIES = 20; // max amount of stun binding retry
@@ -55,7 +54,6 @@ BaseIceProtocol::BaseIceProtocol(uint64_t type)
 	_canSendRetries = CANDIDATE_RETRIES;
 	_pierceRetries = CANDIDATE_RETRIES;
 	_maxRetries = MAX_RETRIES;
-	_maxRetriesLimit = MAX_RETRIES_LIMIT;
 	_chromePeerBindRetries = 0;
 	_allRetriesZero = false;
 	_state = 0;
@@ -151,18 +149,6 @@ bool BaseIceProtocol::FastTick(bool reset, bool &isConnected) {
 		_turnRetries = STUN_RETRIES;
 		_pierceRetries = CANDIDATE_RETRIES;
 		//_maxRetries = MAX_RETRIES; // do not include the max retry, as we want it to be the deciding factor
-	}
-
-	// Reset to happen after max amount of retries, around 4s (40 * 100ms per tick) upto the limit of _maxRetriesLimit(6 times).
-	if ((_maxRetries <= 0) && (_maxRetriesLimit > 0)) {
-		_maxRetriesLimit--;
-
-		// Reset everything including _maxRetries
-		_allRetriesZero = false;
-		_stunRetries = STUN_RETRIES;
-		_turnRetries = STUN_RETRIES;
-		_pierceRetries = CANDIDATE_RETRIES;
-		_maxRetries = MAX_RETRIES;
 	}
 
 	//UPDATE: we make sure that we already exhausted the TURN retries as well
@@ -281,8 +267,7 @@ bool BaseIceProtocol::FastTick(bool reset, bool &isConnected) {
 //#endif
 		_turnRetries = 0;
 
-		// shouldn't use the remote relay candidates till 2s (20 * 100ms per tick)
-		if ((_maxRetries < STUN_RETRIES) || (_maxRetriesLimit != MAX_RETRIES_LIMIT)) {
+		if (_maxRetries < STUN_RETRIES) {
 			_pierceRetries = 0;
 		}
 	} // end Turn segment
