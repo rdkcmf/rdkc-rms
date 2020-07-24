@@ -50,6 +50,7 @@ TCPAcceptor::TCPAcceptor(string ipAddress, uint16_t port, Variant parameters,
 }
 
 TCPAcceptor::~TCPAcceptor() {
+	INFO("TCPAcceptor Destruct");
 	CLOSE_SOCKET(_inboundFd);
 }
 

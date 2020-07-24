@@ -317,7 +317,7 @@ configuration=
 					},
 					]=]--
 					{
-						type="RPC",
+						--type="RPC",
 						-- IMPORTANT!!!
 						-- To set the url below, match the webconfig.lua's ip and port settings
 						--    port=8888,
@@ -325,14 +325,14 @@ configuration=
 						--                    used in cases where a machine has multiple ethernet interfaces
 						-- If using a single ethernet interface, use the localhost ip (not loopback);
 						-- otherwise, use what is defined in bindToIP
-						url="http://127.0.0.1:8888",
-						serializerType="JSON",
+						--url="http://127.0.0.1:8888",
+						--serializerType="JSON",
 						-- serializerType="XML"
 						-- serializerType="XMLRPC"
-						enabledEvents=
-						{  --These are the events sent by default and tend to be the most commonly used
-							"serverStarted",
-						},
+						--enabledEvents=
+						--{  --These are the events sent by default and tend to be the most commonly used
+						--	"serverStarted",
+						--},
 					},
 				},
 			},
