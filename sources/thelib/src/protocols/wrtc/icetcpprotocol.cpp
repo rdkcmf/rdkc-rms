@@ -158,7 +158,7 @@ bool IceTcpProtocol::SignalInputData(IOBuffer &buffer) {
 	//TODO: for now, this is directly linked to the TURN server
 
 	// first see if it is a Stun Message
-	if (StunMsg::IsStun(buffer) &&  StunMsg::IsValidStunType(buffer) ) {
+	if ( StunMsg::IsStun(buffer) ) {
 		//UPDATE: loop through the messages in case that it is a combination
 		// of responses
 		do {

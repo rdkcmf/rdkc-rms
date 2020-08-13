@@ -65,18 +65,28 @@ bool StunMsg::IsStun(IOBuffer & buf) {
 bool StunMsg::IsStun(uint8_t * pBuf, uint32_t len) {
 	if (len < sizeof(stunHeaderBytes_t)) return false; //====>
 	stunHeaderBytes_t * pH = (stunHeaderBytes_t *)pBuf;
+	uint16_t stunpayloadlength = (pH->lenHi << 8) + pH->lenLo;
+	uint16_t stundatalength = STUN_HEADER_LEN + stunpayloadlength;
 	
 	//UPDATE: We check for the following:
 	// 1. First 2 most significat bits is 0
 	// 2. Contains the magic cookie 0x2112A442
 	// 3. Length of the message itself and not of the buffer
-	return (pH->typeHi < 3)
+	if( (pH->typeHi < 3)
 		&& (pH->magic[0] == 0x21)
 		&& (pH->magic[1] == 0x12)
 		&& (pH->magic[2] == 0xA4)
 		&& (pH->magic[3] == 0x42)
-		&& (((pH->lenHi << 8) + pH->lenLo) <= MAX_STUN_MSG_LEN)
-		;
+		&& (stunpayloadlength <= MAX_STUN_MSG_LEN) ) {
+		//Ensure buffer payload received is more than expected stun buffer length
+		if ( len  < stundatalength ) {
+			FATAL("corrupt payload buffer length %d is less than expected stun buffer length %d", len, stundatalength);
+			return false;
+		}
+	} else {
+		return false;
+	}
+	return true;
 }
 
 StunMsg::StunMsg() {
