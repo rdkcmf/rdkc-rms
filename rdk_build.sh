@@ -57,9 +57,10 @@ export PLATFORM_BREAKPAD_BINARY=${RDK_PROJECT_ROOT_PATH}/utility/prebuilts/break
 
 # default component name
 export RDK_COMPONENT_NAME=${RDK_COMPONENT_NAME-`basename $RDK_SOURCE_PATH`}
+
 if [ $XCAM_MODEL == "XHB1" ]; then
  	source ${RDK_PROJECT_ROOT_PATH}/build/components/sdk/setenv2
-	echo "Enable xStreamer for xCam2"
+	echo "Enable xStreamer for DBC"
         export ENABLE_XSTREAMER=true
 else
 #cross compiler
@@ -70,7 +71,17 @@ else
 	export AR=${CROSS_COMPILE}ar
 	export RANLIB=${CROSS_COMPILE}gcc-ranlib
 	export AS=${CROSS_COMPILE}as
+
+if [ "$XCAM_MODEL" == "SCHC2" ]; then
+	echo "Enable xStreamer by default for xCam2"
+	export ENABLE_XSTREAMER=true
+else
+	echo "Disable xStreamer by default for xCam and iCam2"
+	export ENABLE_XSTREAMER=false
 fi
+
+fi
+
 # parse arguments
 INITIAL_ARGS=$@
 
@@ -166,10 +177,10 @@ function install()
  
 }
 
-function setxStreamer()
+function setHydra()
 {
-    echo "setxStreamer - Enable xStreamer"
-    export ENABLE_XSTREAMER=true
+    echo "setHydra - Disable xStreamer"
+    export ENABLE_XSTREAMER=false
 }
 
 
@@ -181,7 +192,7 @@ for i in "$@"; do
 
     echo "$i"
     case $i in
-        enablexStreamer)  HIT=true; setxStreamer ;;
+        enableHydra)  HIT=true; setHydra ;;
         configure)  HIT=true; configure ;;
         clean)      HIT=true; clean ;;
         build)      HIT=true; build ;;
