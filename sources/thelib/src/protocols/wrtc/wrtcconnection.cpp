@@ -65,12 +65,11 @@ WrtcConnection::WrtcConnection()
 	: BaseRTSPProtocol(PT_WRTC_CNX) {
 	_sessionCounter++;
 	_pFastTimer = _pSlowTimer = NULL;
-	_bestIce = NULL;
+	_bestStun = NULL;
 	_started = false;
 	_stopping = false;
 	_gotSDP = false;
 	_sentSDP = false;
-	_createdIces = false;
 	_pSDP = NULL;
 	_pSDPInfo = NULL;
 	_pDtls = NULL;
@@ -81,8 +80,6 @@ WrtcConnection::WrtcConnection()
 	_clientId = "";
 	_rmsClientId = "";
 	_cmdReceived = "Unknown";
-	_stunDomain = "";
-	_turnDomain = "";
 	
 	_isStreamAttached = false;
 	_pCertificate = NULL;
@@ -106,6 +103,7 @@ WrtcConnection::WrtcConnection()
 	_pendingFlag = 0;
 	_pPendingInStream = NULL;
 	SetControlled();	// default as controlled (let browser be pushy)
+	SpawnStunProtocols();	// get a BaseIceProtocol for each network interface
 	SetRmsCapabilities(); // set rms enabled capabilities
 	
 	_ticks = 0;
@@ -129,12 +127,11 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 	_sessionCounter++;
 	_pSig = pSig;
 	_pFastTimer = _pSlowTimer = NULL;
-	_bestIce = NULL;
+	_bestStun = NULL;
 	_started = false;
 	_stopping = false;
 	_gotSDP = false;
 	_sentSDP = false;
-	_createdIces = false;
 	_pSDP = NULL;
 	_pSDPInfo = NULL;
 	_pDtls = NULL;
@@ -145,8 +142,6 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 	_clientId = "";
 	_rmsClientId = "";
 	_cmdReceived = "Unknown";
-	_stunDomain = "";
-	_turnDomain = "";
 	
 	_isStreamAttached = false;
 	_pCertificate = NULL;
@@ -172,6 +167,7 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 	_pPendingInStream = NULL;
 
 	SetControlled();	// default as controlled (let browser be pushy)
+	SpawnStunProtocols();	// get a BaseIceProtocol for each network interface
 	SetRmsCapabilities(); // set rms enabled capabilities
 	
 	_ticks = 0;
@@ -285,20 +281,20 @@ WrtcConnection::~WrtcConnection() {
 
 			RMS Session Candidate IPversion Type: { <RMS  IPVersion> ,<Player IPVersion> }
 		*/
-		if(_bestIce) {
-			Candidate * pCan = _bestIce->GetBestCandidate();
+		if(_bestStun) {
+			Candidate * pCan = _bestStun->GetBestCandidate();
 			if(pCan) {
 				INFO("RMS Session Statistics:%s,%s,%"PRIu64",%"PRIu64",%"PRIu64",%s,%s",
 					STR(_clientId), (pCan->IsIpv6() ? STR("IPV6") : STR("IPV4")), ts, wconFFTs, wconTs,
 					(pCan->IsRelay() ? STR("relay") : (pCan->IsReflex() ? STR("reflex") : STR("unknown"))),
 					STR(_cmdReceived));
 				/* INFO("RMS Session Statistics: %s, %s, %s, %s, %"PRIu64", %"PRIu64", %"PRIu64", %s, %s",
-					STR(_rmsClientId), (_bestIce && _bestIce->IsIpv6() ? STR("IPV6") : STR("IPV4")),
+					STR(_rmsClientId), (_bestStun && _bestStun->IsIpv6() ? STR("IPV6") : STR("IPV4")),
 					STR(_clientId), (pCan->IsIpv6() ? STR("IPV6") : STR("IPV4")), ts, wconFFTs, wconTs,
 					(pCan->IsRelay() ? STR("relay") : (pCan->IsReflex() ? STR("reflex") : STR("unknown"))),
 					STR(_cmdReceived)); */
 
-				INFO("RMS Session Candidate IPversion Type:%s,%s", (_bestIce && _bestIce->IsIpv6() ? STR("IPV6") : STR("IPV4")),
+				INFO("RMS Session Candidate IPversion Type:%s,%s", (_bestStun && _bestStun->IsIpv6() ? STR("IPV6") : STR("IPV4")),
 					(pCan->IsIpv6() ? STR("IPV6") : STR("IPV4")));
 			}
 			_cmdReceived = "Unknown";
@@ -393,12 +389,12 @@ WrtcConnection::~WrtcConnection() {
 	// UPDATE: since we already have a mechanism to remove the ice protocols
 	// we can safely terminate the remaining ones on the list without having to
 	// check if the connection did properly establish or not
-	FOR_VECTOR(_ices, i) {
-		_ices[i]->Terminate();
+	FOR_VECTOR(_stuns, i) {
+		_stuns[i]->Terminate();
 	}
-	_ices.clear();
+	_stuns.clear();
 	
-	_bestIce = NULL;
+	_bestStun = NULL;
 
 	if (_pSig != NULL) {
 		INFO("Closing Player Client ID:%s", STR(_clientId));
@@ -728,13 +724,6 @@ bool WrtcConnection::CreateOutStream(string streamName, BaseInStream *pInStream,
 }
 
 void WrtcConnection::Start(bool hasNewCandidate) {
-	if( !_createdIces ) {
-		// We are starting, so we should have stun/turn set
-		// Create the ice objects, enough so that each stun and turn IP is used on each interface
-		// Filter for ipv6 vs ipv4
-		_createdIces = SpawnIceProtocols();
-	}
-
 	if (_started || _stopping || (hasNewCandidate && _started)) {
 //#ifdef WEBRTC_DEBUG
 		DEBUG("Start() called AGAIN - ignoring...!");
@@ -747,7 +736,7 @@ void WrtcConnection::Start(bool hasNewCandidate) {
 			// Only do this if we have not successfully established
 			// a connection yet. Unless we want to try if this candidate
 			// is more reliable/faster.
-			if (_bestIce && _bestIce->GetBestCandidate()) {
+			if (_bestStun && _bestStun->GetBestCandidate()) {
 				// At this point, we already have a connection
 				// TODO: do we retry still?
 			} else {
@@ -811,14 +800,14 @@ void WrtcConnection::Start(bool hasNewCandidate) {
 	}
 
 	// complete and start each STUN agent (BaseIceProtocol)
-	FOR_VECTOR(_ices, i) {
+	FOR_VECTOR(_stuns, i) {
 		// fill in the SDP exchanged User Info
-		_ices[i]->SetIceUser(_pSDP->GetICEUsername(), _pSDP->GetICEPassword(),
+		_stuns[i]->SetIceUser(_pSDP->GetICEUsername(), _pSDP->GetICEPassword(),
 				_pSDPInfo->iceUsername, _pSDPInfo->icePassword);
-		_ices[i]->SetIceFingerprints(_pSDP->GetFingerprint(), _pSDPInfo->fingerprint);
-		_ices[i]->SetIceControlling(!_isControlled);
+		_stuns[i]->SetIceFingerprints(_pSDP->GetFingerprint(), _pSDPInfo->fingerprint);
+		_stuns[i]->SetIceControlling(!_isControlled);
 		// now start the stun agent
-		_ices[i]->Start(0);
+		_stuns[i]->Start(0);
 		_started = true;
 	}
 
@@ -926,9 +915,9 @@ bool WrtcConnection::FastTick() {
 
 	bool more = false;
 	bool alreadyConnected = false;
-	FOR_VECTOR(_ices, i) {
+	FOR_VECTOR(_stuns, i) {
 		// Tick returns false if done (true if it wants more ticks)
-		more |= _ices[i]->FastTick(reset, alreadyConnected);
+		more |= _stuns[i]->FastTick(reset, alreadyConnected);
 		if (alreadyConnected) {
 			// It has connected already, bail out!
 			more = false;
@@ -939,24 +928,24 @@ bool WrtcConnection::FastTick() {
 	// and change to slow ticks
 	//
 	if (!more) {
-		FOR_VECTOR(_ices, i) {
-			BaseIceProtocol * pStun = _ices[i];	// do the index once
+		FOR_VECTOR(_stuns, i) {
+			BaseIceProtocol * pStun = _stuns[i];	// do the index once
 			if (!pStun->IsDead()) {
 				pStun->Select(); // have the stun check himself
-				if (!_bestIce || (pStun->IsBetterThan(_bestIce))) {
-					_bestIce = pStun;
+				if (!_bestStun || (pStun->IsBetterThan(_bestStun))) {
+					_bestStun = pStun;
 				}
 			}
 		}
 		// panic stuff if we didn't find a connection!
-		if (!_bestIce) {
+		if (!_bestStun) {
 			FATAL("No valid STUN interface found!");
 
 			// Shutdown signalling protocol, as well as this session if no interface found
 			// Doesn't happen today, but should be a good future proofing
 			_pSig->Shutdown(false, true);
 		} else {
-			Candidate * pCan = _bestIce->GetBestCandidate();
+			Candidate * pCan = _bestStun->GetBestCandidate();
 			if (!pCan) {
 
 				if (_pSig != NULL) {
@@ -964,7 +953,7 @@ bool WrtcConnection::FastTick() {
 					_pSig->SetIceState(WRTC_ICE_FAILED);
 				}
 
-				FATAL("STUN has no valid candidate! (%s [%s])", STR(_bestIce->GetHostIpStr()), (_bestIce->IsTcpType() ? STR("TCP") : STR("UDP")));
+				FATAL("STUN has no valid candidate! (%s [%s])", STR(_bestStun->GetHostIpStr()), (_bestStun->IsTcpType() ? STR("TCP") : STR("UDP")));
 
 				// The crash is probably caused by this, there is no peering
 				// connection but has still proceeded with the slow tick
@@ -978,7 +967,7 @@ bool WrtcConnection::FastTick() {
 				}
 
 				INFO("WebRTC connection established: STUN (%s [%s]), Candidate (%s).", 
-						STR(_bestIce->GetHostIpStr()), (_bestIce->IsTcpType() ? STR("TCP") : STR("UDP")), STR(pCan->GetShortString()));
+						STR(_bestStun->GetHostIpStr()), (_bestStun->IsTcpType() ? STR("TCP") : STR("UDP")), STR(pCan->GetShortString()));
 				PROBE_POINT("webrtc", "sess1", "candidate_selected", false);
 				//Output the time it took to get to this point
 				std::stringstream sstrm;
@@ -1000,7 +989,7 @@ bool WrtcConnection::FastTick() {
 
 				// Report STUN message to peer
 				// $ToDo$ should I only do this if I'm (!_isControlled)??
-				_bestIce->ReportBestCandidate();
+				_bestStun->ReportBestCandidate();
 
 				// Now that we have a best candidate, setup the srtp or data channel
 				if (!InitializeDataChannel()) {
@@ -1021,22 +1010,22 @@ bool WrtcConnection::FastTick() {
 				// At this point we have a connection path and are setting up protocol stacks. we should now 
 				// cleanup the stuns that are not going to be used so that we dont have a bunch of extra processing 
 				// and messages being sent.
-				INFO("Deleting unused stuns: %d", _ices.size());
+				INFO("Deleting unused stuns: %d", _stuns.size());
 				// Dont delete the TCP stun as it still has some asynchronous stuff going on.  There is only one
 				// and it will cleanup separately.
 				BaseIceProtocol * tcpStun( NULL );
-				FOR_VECTOR(_ices, i) {
-					if ( _bestIce != _ices[i] && !_ices[i]->IsTcpType() )
-						_ices[i]->Terminate();
-					if ( _ices[i]->IsTcpType() ) {
-						tcpStun = _ices[i];
+				FOR_VECTOR(_stuns, i) {
+					if ( _bestStun != _stuns[i] && !_stuns[i]->IsTcpType() )
+						_stuns[i]->Terminate();
+					if ( _stuns[i]->IsTcpType() ) {
+						tcpStun = _stuns[i];
 					}
 				}
 				// Now that we've spun the unused to terminate/delete, clear the list and reinsert just the chosen one
-				_ices.clear();
-				_ices.push_back( _bestIce );
-				_ices.push_back( tcpStun );
-				INFO("Stuns remaning after the cull: %d", _ices.size());
+				_stuns.clear();
+				_stuns.push_back( _bestStun );
+				_stuns.push_back( tcpStun );
+				INFO("Stuns remaning after the cull: %d", _stuns.size());
 #endif
 			}
 		}
@@ -1122,10 +1111,10 @@ bool WrtcConnection::SlowTick() {
 		return true;
 	}
 
-	if (_bestIce) {
+	if (_bestStun) {
 		_slowTimerCounter++;
 		
-		if (!(_bestIce->SlowTick(false))) {
+		if (!(_bestStun->SlowTick(false))) {
 			// There is no valid candidate (failure of connection establishment)
 			// there should be a number of retry on the slow timer and should not wait
 			// for RRS to disconnect the connection
@@ -1142,8 +1131,8 @@ bool WrtcConnection::SlowTick() {
 
 
 void WrtcConnection::OverrideIceMaxRetries(int newMaxRetries) {
-	FOR_VECTOR(_ices, i) {
-		_ices[i]->SetMaxRetries (newMaxRetries);
+	FOR_VECTOR(_stuns, i) {
+		_stuns[i]->SetMaxRetries (newMaxRetries);
 	}
 }
 
@@ -1152,47 +1141,41 @@ void WrtcConnection::OverrideIceMaxRetries(int newMaxRetries) {
 // note: ipPort is a URL string: "x.y.z.z:pppp"
 //
 bool WrtcConnection::SetStunServer(string ipPortStr) {
-	// saving for logging purposes
-	_stunDomain = ipPortStr;
 	//UPDATE: We should resolve any domains at this point to IP address
 	// Moved here so that we resolve only once
-	if (!ResolveDomainName(ipPortStr, _stunIps)) {
+	string resolvedIpPortStr;
+	if (!ResolveDomainName(ipPortStr, resolvedIpPortStr)) {
 		FATAL("Error setting STUN server!");
 		return false;
 	}
-	
+	INFO("Resolved STUN: %s", STR(resolvedIpPortStr));
+
+	FOR_VECTOR(_stuns, i) {
+		_stuns[i]->SetStunServer(resolvedIpPortStr);
+	}	
 	return true;
 }
 
 bool WrtcConnection::SetTurnServer(string username, string credential, string ipPort) {
-	// saving for logging purposes
-	_turnDomain = ipPort;
 	//UPDATE: We should resolve any domains at this point to IP address
 	// Moved here so that we resolve only once
-	if (!ResolveDomainName(ipPort, _turnIps)) {
+        string resolvedIpPortStr;
+	if (!ResolveDomainName(ipPort, resolvedIpPortStr)) {
 		FATAL("Error setting STUN server!");
 		return false;
 	}
-	_turnUser = username;
-	_turnCreds = credential;
+	INFO("Resolved TURN: %s", STR(resolvedIpPortStr));
 
-	//we typically get turn server configs second, and so if the stun servers are blank then we should use the turn server for stun
-	// if we get a valid stun server later this collection will be overridden, so there is no risk in doing this
-	if( _stunIps.size() <= 0 ) { 
-		_stunDomain = ipPort;
-		_stunIps = _turnIps;
+	FOR_VECTOR(_stuns, i) {
+		_stuns[i]->SetTurnServer(username, credential, resolvedIpPortStr);
 	}
-
 	return true;
 }
 
 bool WrtcConnection::SetCandidate(Candidate * pCan) {
-	if( _ices.size() <= 0 )
-		FATAL("We got a candidate but dont yet have any ice objects to save it to!" );
-	FOR_VECTOR(_ices, i) {
-		// Give the candidate to each Ice object that is of the same protocol
-		if( pCan->IsIpv6() == _ices[i]->IsIpv6())
-			_ices[i]->AddCandidate(pCan);
+	FOR_VECTOR(_stuns, i) {
+		// Add a reference to the STUNs
+		_stuns[i]->AddCandidate(pCan);
 	}
 
 	return true;
@@ -1205,20 +1188,11 @@ bool WrtcConnection::SetControlled(bool isControlled) {
 }
 
 
-bool WrtcConnection::SpawnIceProtocols() {
+bool WrtcConnection::SpawnStunProtocols() {
 	//First make sure the sig protocol is valid
 	if (_pSig == NULL) {
 		FATAL("Signaling protocol is NULL!");
 		return false;
-	}
-
-	INFO("Spawning ICE objects using these resolved IPs for STUN server: %s", STR(_stunDomain) );
-	FOR_VECTOR( _stunIps, i ) {
-		INFO( "     %s", STR(_stunIps[i]));
-	}
-	INFO("Spawning ICE objects using these resolved IPs for TURN server: %s", STR(_turnDomain) );
-	FOR_VECTOR( _turnIps, i ) {
-		INFO( "     %s", STR(_turnIps[i]));
 	}
 
 	// For UDP stuns, use all valid interfaces
@@ -1229,100 +1203,31 @@ bool WrtcConnection::SpawnIceProtocols() {
 		return false;
 	}
 
-	// We now call this at start time, so we should have stun/turn set
-	if( _stunIps.size() == 0 ) {
-		FATAL("Trying to spawn ICE objects without a STUN server");
-		return false;
-	}
-	if( _turnIps.size() == 0 ) {
-		FATAL("Trying to spawn ICE objects without a TURN server");
-		return false;
-	}
-
-	// Create the ice UDP objects, enough so that each stun and turn IP is used on each interface
-	// Filter for ipv6 vs ipv4
-
-	//Split out ipv6 ip's from ipv4 ones so that we can give the right stun/turn ips to each of the sockets
-	vector<string> ipv4Stuns, ipv6Stuns, ipv4Turns, ipv6Turns;
-	FOR_VECTOR(_stunIps, i ) {
-		if( SocketAddress::isV6(_stunIps[i]) ) 
-			ipv6Stuns.push_back(_stunIps[i]);
-		else
-			ipv4Stuns.push_back(_stunIps[i]);
-	}
-	FOR_VECTOR(_turnIps, i ) {
-		if( SocketAddress::isV6(_turnIps[i]) ) 
-			ipv6Turns.push_back(_turnIps[i]);
-		else
-			ipv4Turns.push_back(_turnIps[i]);
-	}
-	
-	//we may not get both IPv4 and IPv6 addresses, so let's use what we do have even though protocols wont match
-	if( ipv6Stuns.size() == 0 ) ipv6Stuns = ipv4Stuns;
-	if( ipv4Stuns.size() == 0 ) ipv4Stuns = ipv6Stuns;
-	if( ipv6Turns.size() == 0 ) ipv6Turns = ipv4Turns;
-	if( ipv4Turns.size() == 0 ) ipv4Turns = ipv6Turns;
-
-	// loop through the local addr vector creating Ice UDP objects
+	// loop through the addr vector creating Stuns
 	FOR_VECTOR(ipAddrs, i) {
-		// Use only matching protocol (ip4/ip6) ip's
-		vector<string> *stunIps, *turnIps;
-		if( SocketAddress::isV6(ipAddrs[i]) ) {
-			stunIps = &ipv6Stuns;
-			turnIps = &ipv6Turns;
-		}
-		else {
-			stunIps = &ipv4Stuns;
-			turnIps = &ipv4Turns;
-		}
-
-		// We want to loop over the stun/turn ips and use each one at least once.
-		// Since we have to send them as a pair, we have to do this annoying loop
-		// until we get to the end of whichever one is longer.
-		bool moreAddrs(true);
-		int s(0), t(0);
-		int smax = stunIps->size() - 1;
-		int tmax = turnIps->size() - 1;
-		
-		while (moreAddrs) {
-			INFO("Creating ICE Object with local socket: %s, Stun: %s, Turn: %s", STR(ipAddrs[i]), STR((*stunIps)[s]), STR((*turnIps)[t]) );
-			BaseIceProtocol *pIceUdp = new IceUdpProtocol();
-			pIceUdp->Initialize(ipAddrs[i], this, _pSig);
-			pIceUdp->SetStunServer( (*stunIps)[s] );
-			pIceUdp->SetTurnServer( _turnUser, _turnCreds, (*turnIps)[t] );
-			_ices.push_back(pIceUdp);
-
-			// only increment to max values so we dont blow past the end of our vectors
-			moreAddrs = false;
-			if( smax > s ) {
-				s++;
-				moreAddrs = true;
-			}
-			if( tmax > t ) {
-				t++; 
-				moreAddrs = true;
-			}
-		}	
+	// Spawn a UDP ICE instance
+	BaseIceProtocol *pStunUdp = new IceUdpProtocol();
+	pStunUdp->Initialize(ipAddrs[i], this, _pSig);
+	_stuns.push_back(pStunUdp);
 	}
 #endif
 
-
+	// For TCP stuns, we can use our used public interface since we know we can make a tcp connection on it already
 #ifdef ENABLE_ICE_TCP
-	// The TCP socket doesnt take a bind IP, so lets just use a dummy
-	string ip = "0.0.0.0";	
-
-	// Spawn TCP ICE for each turn IP (ice TCP doesnt connect to stun servers)
-	FOR_VECTOR(_turnIps, i ) {
-		BaseIceProtocol *pIceTcp = new IceTcpProtocol();
-		pIceTcp->Initialize(ip, this, _pSig);
-		// ICE TCP doesnt use stun, just does turn, so setting the stun is good for completeness but
-		// is otherwise not used
-		pIceTcp->SetStunServer( _turnIps[i] );
-		pIceTcp->SetTurnServer( _turnUser, _turnCreds, _turnIps[i] );
-		_ices.push_back(pIceTcp);
+	// Get the IO Handler of the webRTC signaling protocol
+	IOHandler *pHandler = _pSig->GetIOHandler();
+	if (pHandler == NULL) {
+		FATAL("IO Handler is NULL!");
+		return false;
 	}
-#endif
+	// Get the IP address of the interface used
+	string ip = ((TCPCarrier *) pHandler)->GetNearEndpointAddressIp();
 
+	// Spawn TCP ICE
+	BaseIceProtocol *pStunTcp = new IceTcpProtocol();
+	pStunTcp->Initialize(ip, this, _pSig);
+	_stuns.push_back(pStunTcp);
+#endif
 	return true;
 }
 
@@ -1393,8 +1298,6 @@ bool WrtcConnection::GetInterfaceIps(vector<string> & ips) {
 		return false;
 	}
 
-	INFO("Getting all local address/interfaces so we can create ICE objects for each");
-
 	//Loop over the interfaces and pull out the valid local IP's (ipv4 and ipv6)
 	for (currIface = localIfList; currIface != NULL; currIface = currIface->ifa_next) {
 		// Skip the interface with null address
@@ -1420,16 +1323,13 @@ bool WrtcConnection::GetInterfaceIps(vector<string> & ips) {
 		}
 
 		// Only use non-loopback, non-local-link, and non-empty ip's
-		if( address.size() == 0 ) {
-			// to help with log clarity, silently skip empty addresses
-			continue;
-		}
-		else if ( ( currIface->ifa_name[0] == 'l' && currIface->ifa_name[1] == 'o' ) ||
-				( address.find( "fe80::" ) != std::string::npos )) {
+		if ( ( currIface->ifa_name[0] == 'l' && currIface->ifa_name[1] == 'o' ) ||
+				( address.find( "fe80::" ) != std::string::npos ) || 
+				( address.size() == 0 )) {
 				INFO("Skipping: %s", STR(address));
 				continue;
 		} else {
-			//INFO("VALID:  %s", STR(address));
+			INFO("VALID:  %s", STR(address));
 			// Valid address, so construct a candidate with it
 			ips.push_back(address);
 		}
@@ -1444,7 +1344,7 @@ bool WrtcConnection::GetInterfaceIps(vector<string> & ips) {
 	sort( ips.begin(), ips.end() );
 	ips.erase( unique( ips.begin(), ips.end() ), ips.end() );
 
-	INFO("List of local IPs that we will create ICE objects for:");
+	INFO("Final list of IPs:");
 	for( size_t i = 0; i < ips.size(); i++ )
 		INFO("    %s", STR(ips[i]));
 
@@ -1636,7 +1536,7 @@ bool WrtcConnection::InitializeDataChannel() {
 
 	Variant settings;
 
-	string localIpStr = _bestIce->GetHostIpStr();
+	string localIpStr = _bestStun->GetHostIpStr();
 	if (IpPortStrIsV6(localIpStr)) {
 		SplitIpStrV6(localIpStr, ipv6, port);
 	} else {
@@ -1644,7 +1544,7 @@ bool WrtcConnection::InitializeDataChannel() {
 	}
 	settings["localPort"] = port;
 
-	string remoteIpStr = _bestIce->GetBestCanIpStr();
+	string remoteIpStr = _bestStun->GetBestCanIpStr();
 	if (IpPortStrIsV6(remoteIpStr)) {
 		SplitIpStrV6(remoteIpStr, ipv6, port);
 	} else {
@@ -1678,7 +1578,7 @@ bool WrtcConnection::InitializeDataChannel() {
 	}
 	
 	// Link the protocols together STUN -> DTLS -> SCTP -> WrtcConnection
-	_pDtls->SetFarProtocol(_bestIce);
+	_pDtls->SetFarProtocol(_bestStun);
 
 	if(IsSctpAlive()) {
 		_pSctp->SetFarProtocol(_pDtls);
@@ -1713,10 +1613,10 @@ bool WrtcConnection::InitializeSrtp() {
 	uint32_t ip;
 	uint16_t port;
 	Variant settings;
-	string localIpStr = _bestIce->GetHostIpStr();
+	string localIpStr = _bestStun->GetHostIpStr();
 	SplitIpStrV4(localIpStr, ip, port);
 	settings["localPort"] = port;
-	string remoteIpStr = _bestIce->GetBestCanIpStr();
+	string remoteIpStr = _bestStun->GetBestCanIpStr();
 	SplitIpStrV4(remoteIpStr, ip, port);
 	settings["remotePort"] = port;
 	settings[CONF_SSL_CERT] = _customParameters[CONF_SSL_CERT];
@@ -1728,7 +1628,7 @@ bool WrtcConnection::InitializeSrtp() {
 	_pDtls->Initialize(settings);
 
 	// Link the protocols together STUN -> DTLS -> WrtcConnection
-	_pDtls->SetFarProtocol(_bestIce);
+	_pDtls->SetFarProtocol(_bestStun);
 	this->SetFarProtocol(_pDtls);
 
 	//TODO: consider refactoring to prevent the need for this
@@ -2418,9 +2318,9 @@ void WrtcConnection::ProcessHeartbeat() {
 
 void WrtcConnection::RemoveIceInstance(BaseIceProtocol *pIce) {
 	// Remove all instances of this ice protocol from the lists being managed
-	FOR_VECTOR_ITERATOR(BaseIceProtocol *, _ices, iterator) {
+	FOR_VECTOR_ITERATOR(BaseIceProtocol *, _stuns, iterator) {
 		if (VECTOR_VAL(iterator)->GetId() == pIce->GetId()) {
-			_ices.erase(iterator);
+			_stuns.erase(iterator);
 			break;
 		}
 	}
@@ -2472,27 +2372,45 @@ string WrtcConnection::GetPeerState() {
 	}
 }
 
-bool WrtcConnection::ResolveDomainName(string domainName, vector<string> &resolvedIPs) {
-	resolvedIPs.clear();
+bool WrtcConnection::ResolveDomainName(string domainName, string &resolvedName) {
 	string domain;
 	uint16_t port;
 	if (!SplitIpStr(domainName, domain, port)) {
-		FATAL("Invalid STUN/TURN server format (%s)!", STR(domainName));
+		FATAL("Invalid STUN server format (%s)!", STR(domainName));
 		return false;
 	}
+#if 0
+	string ip = getHostByName(domain);
+	if (ip == "") {
+		FATAL("Could not resolve STUN server (%s)!", STR(domain));
+		return false;
+	}
+#endif
 
-	if(!getAllHostByName(domain, resolvedIPs)) {
-		FATAL("Could not resolve STUN/TURN server (%s)!", STR(domain));
+	string ip;
+	vector <string> addrList;
+
+	if(!getAllHostByName(domain, addrList)) {
+		FATAL("Could not resolve STUN server (%s)!", STR(domain));
 		return false;
 	}
 
 	INFO("List of resolved ips for %s are: ", STR(domain));
-	FOR_VECTOR(resolvedIPs, i) {
-		INFO(" %s", STR(resolvedIPs[i]) );
-		//Update resolutions with port number so we can use them all later
-		resolvedIPs[i] = SocketAddress::getIPwithPort(resolvedIPs[i], port);
+	FOR_VECTOR_ITERATOR(string, addrList, i) {
+		INFO(" %s", STR(VECTOR_VAL(i)) );
 	}
 
-	return resolvedIPs.size() > 0;
+	FOR_VECTOR_ITERATOR(string, addrList, i) {
+		INFO(" %s", STR(VECTOR_VAL(i)) );
+		ip = STR(VECTOR_VAL(i));
+
+		// break the loop once we get an ip
+		if (!(ip.empty())) {
+			break;
+		}
+	}
+
+	resolvedName = SocketAddress::getIPwithPort(ip, port);
+	return true;
 }
 #endif // HAS_PROTOCOL_WEBRTC

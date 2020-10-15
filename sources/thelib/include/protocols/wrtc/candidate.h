@@ -74,7 +74,7 @@ public:
 	bool IsIpPort(string ip, uint16_t port);	// return true if matches
 	bool IsServer() { return _isServer; }
 	string & GetIpStr() { return _ipStr; };
-	bool IsIpv6() { return SocketAddress::isV6(_ipAddress); };
+	bool IsIpv6() { return _ipAddress.find(':') != string::npos; };
 	bool IsUdp() { return _transport == "udp"; };
 	bool IsTcp() { return _transport == "tcp"; }
 

@@ -430,8 +430,8 @@ bool BaseIceProtocol::IsBetterThan(BaseIceProtocol * pStun) {
 //
 
 bool BaseIceProtocol::SetStunServer(string stunServerIpStr) {
-	// INFO("[ICE-%s (%s)] Got STUN server ip: %s", (_isTcp ? STR("TCP") : STR("UDP")),
-	// 		STR(_bindIp), STR(stunServerIpStr));
+	INFO("[ICE-%s (%s)] Got STUN server ip: %s", (_isTcp ? STR("TCP") : STR("UDP")),
+	 		STR(_bindIp), STR(stunServerIpStr));
 
 	_stunServerAddress.setIPPortAddress(stunServerIpStr);
 	_stunServerIpStr = _stunServerAddress.getIPwithPort();
@@ -449,8 +449,8 @@ bool BaseIceProtocol::SetStunServer(string stunServerIpStr) {
 }
 
 bool BaseIceProtocol::SetTurnServer(string username, string credential, string ipPort) {
-	// INFO("[ICE-%s (%s)] Got TURN {ip,user,cred}: {%s,%s,%s}", (_isTcp ? STR("TCP") : STR("UDP")),
-	// 	STR(_bindIp), STR(ipPort), STR(username), STR(credential));
+	INFO("[ICE-%s (%s)] Got TURN {ip,user,cred}: {%s,%s,%s}", (_isTcp ? STR("TCP") : STR("UDP")),
+	 	STR(_bindIp), STR(ipPort), STR(username), STR(credential));
 
 	_turnUsername = username;
 	_turnCredential = credential;

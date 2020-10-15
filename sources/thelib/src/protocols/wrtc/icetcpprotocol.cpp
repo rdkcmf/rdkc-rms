@@ -51,14 +51,9 @@ void IceTcpProtocol::Start(time_t ms) {
 	DEBUG("[ICE-TCP] Start called for host: %s", STR(_bindIp));
 //#endif
 
-	// We need to set this to started first, otherwise we'll block the progression of 
-	// candidate selection if something goes wrong here
-	_started = true;
-	
 	if (_turnServerIpStr.empty()) {
 		// We don't have any TURN server
 		FATAL("[ICE-TCP] No available TURN server.");
-		_state |= ST_DEAD;
 		return;
 	}
 
@@ -67,7 +62,6 @@ void IceTcpProtocol::Start(time_t ms) {
 			CONF_PROTOCOL_TCP_PASSTHROUGH);
 	if (chain.size() == 0) {
 		FATAL("[ICE-TCP] Unable to resolve protocol chain");
-		_state |= ST_DEAD;
 		return;
 	}
 
@@ -83,7 +77,6 @@ void IceTcpProtocol::Start(time_t ms) {
 	//string resolvedIP = getHostByName(ip);
 	if (!TCPConnector<IceTcpProtocol>::Connect(ip, port, chain, params)) {
 		FATAL("[ICE-TCP] Unable to connect to %s:%" PRIu16, STR(ip), port);
-		_state |= ST_DEAD;
 		return;
 	}
 }
@@ -150,6 +143,8 @@ bool IceTcpProtocol::SignalPassThroughProtocolCreated(PassThroughProtocol *pProt
 	
 	bool result;
 	FastTick(true, result);	// kick send to Stun server
+	// we set started here so above Tick() just does the Stun server calls
+	_started = true;
 
 	return true;
 }

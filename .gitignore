@@ -55,9 +55,4 @@ builders/netbeans/osx
 # OSX files
 .DS_Store
 
-#vscode files
-.vscode/ipch/*
 
-#crossbuild temp files
-builders/make2/dist/*
-builders/make2/output/*
