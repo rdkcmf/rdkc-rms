@@ -252,7 +252,7 @@ private:
 	bool SendStreamAsMp4(string &streamName);
 	bool SendCommandData(string &message);
 	
-	bool SpawnIceProtocols();
+	bool SpawnStunProtocols();
 	bool GetInterfaceIps(vector<string> & ips);
 	
 	bool InitializeCertificate();
@@ -292,19 +292,12 @@ private:
 	SDPInfo * _pSDPInfo;
 
 	// the ultimate winner BaseIceProtocol:
-	BaseIceProtocol * _bestIce;
+	BaseIceProtocol * _bestStun;
 
 	WrtcSigProtocol * _pSig;
 	string _stunServerIpStr;
-	vector<BaseIceProtocol *> _ices;
+	vector<BaseIceProtocol *> _stuns;
 	MediaContext _mediaContext;
-	string _stunDomain;
-	string _turnDomain;
-	vector<string> _stunIps;
-	vector<string> _turnIps;
-	string _turnUser;
-	string _turnCreds;
-	bool _createdIces;
 	//uint64_t _baseMs;
 
 	//TODO: we might not need this reference if we're linked as a protocol chain?
@@ -385,7 +378,7 @@ private:
 	 * @param resolvedName Resolved string format
 	 * @return true on success, false otherwise
 	 */
-	bool ResolveDomainName(string domainName, vector<string> &resolvedIPs);
+	bool ResolveDomainName(string domainName, string &resolvedName);
 };
 
 #endif	/* _WRTCCONNECTION_H */

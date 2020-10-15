@@ -411,13 +411,6 @@ bool WrtcSigProtocol::SignalInputData(IOBuffer &buffer) {
 		else if (msg.find("candidate") != string::npos) {
 
 			INFO("Got Candidate Msg: %s", STR(msg));
-			if (_iceState == WRTC_ICE_NEW) {
-				INFO("Ice State Transition: %s-checking", STR(GetIceState()));
-				_iceState = WRTC_ICE_CHECKING;
-			}
-
-			// Prior to processing candidate, make sure we are started. this will also reset the fastTick timers
-			_pWrtc->Start(true);
 
 			ParseCanIds(msg);// parse & set: _sid, _myCanId, _hisCanId
 
@@ -447,7 +440,17 @@ bool WrtcSigProtocol::SignalInputData(IOBuffer &buffer) {
 					_pWrtc->SetCandidate(pCan);
 				}
 
+				// We are now supporting ICE trickle, start once a candidate is available
 				if (pCan != NULL) {
+#ifdef WEBRTC_DEBUG
+					WARN("Starting Upstream with Candidate Message Event");
+#endif
+				if (_iceState == WRTC_ICE_NEW) {
+					INFO("Ice State Transition: %s-checking", STR(GetIceState()));
+					_iceState = WRTC_ICE_CHECKING;
+				}
+					_pWrtc->Start(true);
+
 					// Clean-up
 					delete pCan;
 				}
