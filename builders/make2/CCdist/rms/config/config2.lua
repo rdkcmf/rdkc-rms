@@ -90,16 +90,16 @@ configuration=
 				},
 				{
 					ip="127.0.0.1",
-					port=7777,
-					protocol="inboundHttpJsonCli"
-				},
-				{
-					ip="127.0.0.1",
 					port=1222,
 					protocol="inboundAsciiCli",
 					useLengthPadding=true
 				},
       --[[
+				{
+					ip="127.0.0.1",
+					port=7777,
+					protocol="inboundHttpJsonCli"
+				},
 				-- RTMP and clustering
 				{
 					ip="127.0.0.1",
