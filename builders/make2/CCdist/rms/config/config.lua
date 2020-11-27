@@ -118,15 +118,16 @@ configuration=
 					protocol="inboundBinVariant",
 					clustering=true
 				},
+	]]--
 
 				-- RTSP
 				{
-					ip="127.0.0.1",
+					ip="0.0.0.0",
 					port=5544,
 					protocol="inboundRtsp",
 				},
 
-				-- LiveFLV ingest
+	--[[			-- LiveFLV ingest
 				{
 					ip="127.0.0.1",
 					port=6666,
