@@ -58,9 +58,9 @@ export PLATFORM_BREAKPAD_BINARY=${RDK_PROJECT_ROOT_PATH}/utility/prebuilts/break
 # default component name
 export RDK_COMPONENT_NAME=${RDK_COMPONENT_NAME-`basename $RDK_SOURCE_PATH`}
 
-if [ $XCAM_MODEL == "XHB1" ]; then
+if [ "$XCAM_MODEL" == "XHB1" ] || [ "$XCAM_MODEL" == "XHC3" ]; then
  	source ${RDK_PROJECT_ROOT_PATH}/build/components/sdk/setenv2
-	echo "Enable xStreamer for DBC"
+	echo "Enable xStreamer for DBC and XHC3"
         export ENABLE_XSTREAMER=true
 else
 #cross compiler
@@ -138,6 +138,10 @@ function build()
 	 	echo "Buiding RMS for XHB1"
 		export ENABLE_XSTREAMER=true
 	 	sh createPackage.sh linaro-aarch64-2017.08-gcc7.1.cmk
+	elif [ $XCAM_MODEL == "XHC3" ]; then
+	 	echo "Buiding RMS for XHC3"
+		export ENABLE_XSTREAMER=true
+	 	sh createPackage.sh linaro-armv7ahf-2014.12-gcc4.9.1.cmk
 	else
 		echo "Building RMS for xCAM/iCAM2"
 		sh createPackage.sh linaro-armv7ahf-2014.12-gcc4.9.cmk
@@ -162,6 +166,9 @@ function install()
 	sh makeforLinarogcc5.2.sh
  elif [ $XCAM_MODEL == "XHB1" ]; then
 	sh makeforLinarogcc7.1.sh
+ elif [ $XCAM_MODEL == "XHC3" ]; then
+        echo "Installing  RMS for XHC3"
+	sh makeforLinarogcc4.9.sh
  else
         echo "Installing RMS for xCAM/iCAM2"
         sh makeforLinarogcc4.9.sh
