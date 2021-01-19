@@ -60,7 +60,7 @@
     <MAP isArray="true" name="push" />
     <MAP isArray="true" name="record" />
     <MAP isArray="false" name="serverVersion">
-        <STR name="banner">RDKC Media Server (www.comcast.com) version 1.7.1 build 5082 with hash: 9c3a1f0c57155f56d180f541854639a9ebb2866b on branch: release/1.7.1_comcast - Pacman - (built for Linaro-gcc4.9-armv7ahf on 2018-01-19T22:00:48.000)</STR>
+        <STR name="banner">RDKC Media Server version 1.7.1 build 5082 with hash: 9c3a1f0c57155f56d180f541854639a9ebb2866b on branch: release/1.7.1_comcast - Pacman - (built for Linaro-gcc4.9-armv7ahf on 2018-01-19T22:00:48.000)</STR>
         <STR name="branchName">release/1.7.1_comcast</STR>
         <STR name="buildDate">2018-01-19T22:00:48.000</STR>
         <STR name="buildNumber">5082</STR>

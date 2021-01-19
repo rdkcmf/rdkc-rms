@@ -522,27 +522,9 @@ bool SCTPProtocol::CreateInboundChannel() {
 		return false;
 	}
 
-	//read the low level informational message
-	/*
-	 * 0                   1                   2                   3
-	 * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |  Message Type |  Channel Type |            Priority           |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |                    Reliability Parameter                      |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |         Label Length          |       Protocol Length         |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * \                                                               /
-	 * |                             Label                             |
-	 * /                                                               \
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * \                                                               /
-	 * |                            Protocol                           |
-	 * /                                                               \
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 */
+	// RFC 8832 See section 5.1 "DATA_CHANNEL_OPEN Message" https://tools.ietf.org/html/rfc8832
 
+	//read the low level informational message
 	if (_received.amount < 13) {
 		FATAL("Invalid channel open message: size is too small");
 		return false;
@@ -902,26 +884,9 @@ int8_t SCTPProtocol::DoCreateOutboundChannel(const string &name) {
 		return -1;
 	}
 
+	// RFC 8832 See section 5.1 "DATA_CHANNEL_OPEN Message"
+
 	//send the low level informational message
-	/*
-	 * 0                   1                   2                   3
-	 * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |  Message Type |  Channel Type |            Priority           |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |                    Reliability Parameter                      |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |         Label Length          |       Protocol Length         |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * \                                                               /
-	 * |                             Label                             |
-	 * /                                                               \
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * \                                                               /
-	 * |                            Protocol                           |
-	 * /                                                               \
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 */
 
 	//allocate the buffer
 	uint8_t *pBuffer = new uint8_t[12 + name.length()];

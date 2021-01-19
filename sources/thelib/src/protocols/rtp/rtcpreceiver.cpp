@@ -97,19 +97,8 @@ void RTCPReceiver::ResetNackStats() {
 	memset(&_nackStats, 0, sizeof(NackStats));
 }
 
-/*
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |V=2|P|   FMT   |       PT      |          length               |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                  SSRC of packet sender                        |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                  SSRC of media source                         |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   :            Feedback Control Information (FCI)                 :
-   :                                                               :
-*/
+// RFC 4585 p. 32, See 'Common Packet Format for Feedback Messages' table
+// https://tools.ietf.org/html/rfc4585#section-6.1
 
 bool RTCPReceiver::ProcessRTCPMessage(uint8_t *rtcpMessage, uint32_t messageLength) {
 
