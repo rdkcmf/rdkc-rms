@@ -285,77 +285,8 @@ bool OutNetRTPUDPH264Stream::PushVideoData(IOBuffer &buffer, double pts, double 
 		dts = dts - _tsOffset;
 		pts = pts - _tsOffset;
 	}
-	/*
-	 *
-	 *  0                   1                   2                   3
-	 *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |V=2|P|X|  CC   |M|     PT      |       sequence number         |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |                           timestamp                           |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |           synchronization source (SSRC) identifier            |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |F|NRI|   28    |S|E|R|  Type   |                               |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               |
-	 * |                                                               |
-	 * |                         FU payload                            |
-	 * |                                                               |
-	 * |                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |                               :...OPTIONAL RTP padding        |
-	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 *
-	 *
-	 *
-	 * Version: (2 bits) Indicates the version of the protocol. Current version is 2.[19]
-	 *
-	 * P (Padding): (1 bit) Used to indicate if there are extra padding bytes at
-	 * the end of the RTP packet. A padding might be used to fill up a block of
-	 * certain size, for example as required by an encryption algorithm. The
-	 * last byte of the padding contains the number of how many padding
-	 * bytes were added (including itself).[19][13]:12
-	 *
-	 * X (Extension): (1 bit) Indicates presence of an Extension header between
-	 * standard header and payload data. This is application or profile specific.[19]
-	 *
-	 * CC (CSRC Count): (4 bits) Contains the number of CSRC identifiers
-	 * (defined below) that follow the fixed header.[13]:12
-	 *
-	 * M (Marker): (1 bit) Used at the application level and defined by a
-	 * profile. If it is set, it means that the current data has some special
-	 * relevance for the application.[13]:13
-	 *
-	 * PT (Payload Type): (7 bits) Indicates the format of the payload and
-	 * determines its interpretation by the application. This is specified by an
-	 * RTP profile. For example, see RTP Profile for audio and video conferences
-	 * with minimal control (RFC 3551).[20]
-	 *
-	 * Sequence Number: (16 bits) The sequence number is incremented by one for
-	 * each RTP data packet sent and is to be used by the receiver to detect
-	 * packet loss and to restore packet sequence. The RTP does not specify any
-	 * action on packet loss; it is left to the application to take appropriate
-	 * action. For example, video applications may play the last known frame in
-	 * place of the missing frame.[21] According to RFC 3550, the initial value
-	 * of the sequence number should be random to make known-plaintext attacks
-	 * on encryption more difficult.[13]:13 RTP provides no guarantee of delivery,
-	 * but the presence of sequence numbers makes it possible to detect missing
-	 * packets.[1]
-	 *
-	 *
-	 * Timestamp: (32 bits) Used to enable the receiver to play back the received
-	 * samples at appropriate intervals. When several media streams are present,
-	 * the timestamps are independent in each stream, and may not be relied upon
-	 * for media synchronization. The granularity of the timing is application
-	 * specific. For example, an audio application that samples data once every
-	 * 125 µs (8 kHz, a common sample rate in digital telephony) could use that
-	 * value as its clock resolution. The clock granularity is one of the details
-	 * that is specified in the RTP profile for an application.[21]
-	 *
-	 *
-	 * SSRC: (32 bits) Synchronization source identifier uniquely identifies the
-	 * source of a stream. The synchronization sources within the same RTP
-	 * session will be unique.[13]:15
-	 */
+
+	// https://tools.ietf.org/html/rfc3550#section-5.1
 
 	uint32_t dataLength = GETAVAILABLEBYTESCOUNT(buffer);
 	uint8_t *pData = GETIBPOINTER(buffer);

@@ -28,7 +28,7 @@
     <MAP isArray="true" name="push" />
     <MAP isArray="true" name="record" />
     <MAP isArray="false" name="serverVersion">
-        <STR name="banner">RDKC Media Server (www.comcast.com) version 1.7.0-beta build 3941 with hash: fb82ca96b1e8d814510446bf710d6e608f4657ee on branch: develop - PacMan|m| - (built for Ubuntu-14.04-i686 on 2015-09-24T06:11:29.000)</STR>
+        <STR name="banner">RDKC Media Server version 1.7.0-beta build 3941 with hash: fb82ca96b1e8d814510446bf710d6e608f4657ee on branch: develop - PacMan|m| - (built for Ubuntu-14.04-i686 on 2015-09-24T06:11:29.000)</STR>
         <STR name="branchName">develop</STR>
         <UINT64 name="buildDate">1443075089</UINT64>
         <STR name="buildNumber">3941</STR>

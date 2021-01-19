@@ -34,24 +34,7 @@ AtomAVC1::~AtomAVC1() {
 }
 
 bool AtomAVC1::Read() {
-	//aligned(8) abstract class SampleEntry (unsigned int(32) format) extends Box(format){
-	//	const unsigned int(8)[6] reserved = 0;
-	//	unsigned int(16) data_reference_index;
-	//}
-	//class VisualSampleEntry(codingname) extends SampleEntry (codingname){
-	//  unsigned int(16) pre_defined = 0;
-	//	const unsigned int(16) reserved = 0;
-	//	unsigned int(32)[3] pre_defined = 0;
-	//	unsigned int(16) width;
-	//	unsigned int(16) height;
-	//	template unsigned int(32) horizresolution = 0x00480000; // 72 dpi template
-	//  unsigned int(32) vertresolution = 0x00480000; // 72 dpi
-	//  const unsigned int(32) reserved = 0;
-	//	template unsigned int(16) frame_count = 1;
-	//	string[32] compressorname;
-	//	template unsigned int(16) depth = 0x0018;
-	//	int(16) pre_defined = -1;
-	//}
+	// See 'Sample Description Box' table in ISO/IEC 14496-12
 
 	if (!SkipBytes(78)) {
 		FATAL("Unable to skip 78 bytes");

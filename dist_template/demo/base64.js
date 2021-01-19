@@ -18,37 +18,43 @@
 # limitations under the License.
 #########################################################################
 */
+
+/*
+Copyright (c) 2007-2016 Kevin van Zonneveld (https://kvz.io) and Contributors (https://locutus.io/authors)
+*/
+
 /*! base64_encode */
-function base64_encode (data) {
-	// http://kevin.vanzonneveld.net
-	// +   original by: Tyler Akins (http://rumkin.com)
-	// +   improved by: Bayron Guevara
-	// +   improved by: Thunder.m
-	// +   improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-	// +   bugfixed by: Pellentesque Malesuada
-	// +   improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-	// +   improved by: Rafal Kukawski (http://kukawski.pl)
-	// *     example 1: base64_encode('Kevin van Zonneveld');
-	// *     returns 1: 'S2V2aW4gdmFuIFpvbm5ldmVsZA=='
+function base64_encode (stringToEncode) {
+  //  discuss at: https://locutus.io/php/base64_encode/
+  // original by: Tyler Akins (https://rumkin.com)
+  // improved by: Bayron Guevara
+  // improved by: Thunder.m
+  // improved by: Kevin van Zonneveld (https://kvz.io)
+  // improved by: Kevin van Zonneveld (https://kvz.io)
+  // improved by: Rafal Kukawski (https://blog.kukawski.pl)
+  // bugfixed by: Pellentesque Malesuada
+  // improved by: Indigo744
+  //   example 1: base64_encode('Kevin van Zonneveld')
+  //   returns 1: 'S2V2aW4gdmFuIFpvbm5ldmVsZA=='
 	// mozilla has this native
 	// - but breaks in 2.0.0.12!
 	//if (typeof this.window['btoa'] == 'function') {
-	//    return btoa(data);
+	//    return btoa(stringToEncode);
 	//}
 	var b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
 	var o1, o2, o3, h1, h2, h3, h4, bits, i = 0,
 	ac = 0,
 	enc = "",
-	tmp_arr = [];
+	tmpArr = [];
 
-	if (!data) {
-		return data;
+	if (!stringToEncode) {
+		return stringToEncode;
 	}
 
 	do { // pack three octets into four hexets
-		o1 = data.charCodeAt(i++);
-		o2 = data.charCodeAt(i++);
-		o3 = data.charCodeAt(i++);
+		o1 = stringToEncode.charCodeAt(i++);
+		o2 = stringToEncode.charCodeAt(i++);
+		o3 = stringToEncode.charCodeAt(i++);
 
 		bits = o1 << 16 | o2 << 8 | o3;
 
@@ -58,12 +64,12 @@ function base64_encode (data) {
 		h4 = bits & 0x3f;
 
 		// use hexets to index into b64, and append result to encoded string
-		tmp_arr[ac++] = b64.charAt(h1) + b64.charAt(h2) + b64.charAt(h3) + b64.charAt(h4);
-	} while (i < data.length);
+		tmpArr[ac++] = b64.charAt(h1) + b64.charAt(h2) + b64.charAt(h3) + b64.charAt(h4);
+	} while (i < stringToEncode.length);
 
-	enc = tmp_arr.join('');
+	enc = tmpArr.join('');
 
-	var r = data.length % 3;
+	var r = stringToEncode.length % 3;
 
 	return (r ? enc.slice(0, r - 3) : enc) + '==='.slice(r || 3);
 }

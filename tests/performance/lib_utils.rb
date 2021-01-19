@@ -41,33 +41,33 @@ if osIsWindows
     key.chr
   end
 else
-  # read one char w/o enter nor echo
+  # read one char w/o hitting enter/return nor echo
   def Utils.getKey
     begin
-      # save previous state of stty
-      old_state = `stty -g`
-      # disable echoing and enable raw (not having to press enter)
+      # save current stty settings
+      prev_setting = `stty -g`
+      # the key pressed is not displayed on the screen and enable raw
       system "stty raw -echo"
-      c = STDIN.getc.chr
-      # gather next two characters of special keys
-      if (c=="\e")
-        extra_thread = Thread.new{
-          c = c + STDIN.getc.chr
-          c = c + STDIN.getc.chr
+      inputChr = STDIN.getc.chr
+      # fetch next two characters of special keys
+      if (inputChr=="\e")
+        thr = Thread.new{
+          inputChr = inputChr + STDIN.getc.chr
+          inputChr = inputChr + STDIN.getc.chr
         }
-        # wait just long enough for special keys to get swallowed
-        extra_thread.join(0.00001)
-        # kill thread so not-so-long special keys don't wait on getc
-        extra_thread.kill
+        # wait for special keys to be read
+        thr.join(0.00001)
+        # kill thread - not to wait on getc for long
+        thr.kill
       end
     rescue => ex
       puts "#{ex.class}: #{ex.message}"
       puts ex.backtrace
     ensure
-      # restore previous state of stty
-      system "stty #{old_state}"
+      # restore previous settings
+      system "stty #{prev_setting}"
     end
-    return c
+    return inputChr
   end
 end
 
