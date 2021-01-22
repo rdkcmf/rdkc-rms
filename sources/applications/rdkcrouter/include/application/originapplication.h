@@ -198,7 +198,7 @@ namespace app_rdkcrouter {
 		virtual void SignalLinkedStreams(BaseInStream *pInStream, BaseOutStream *pOutStream);
 		virtual void SignalUnLinkingStreams(BaseInStream *pStream,
 				BaseOutStream *pOutStream);
-		virtual void SignalStreamRegistered(BaseStream *pStream);
+		virtual void SignalStreamRegistered(BaseStream *pStream, bool registerStreamExpiry = true);
 		virtual bool OutboundConnectionFailed(Variant &customParameters);
 		void SetStreamStatus(Variant &config, StreamStatus status,
 				uint64_t uniqueStreamId);

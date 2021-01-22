@@ -263,7 +263,8 @@ bool InboundConnectivity::Initialize(Variant &parameters) {
 		//create the input network RTSP stream
 		_pInStream = new InNetRTPStream(_pRTSP, _publicStreamName, _videoTrack, _audioTrack,
 			bandwidth, _rtcpDetectionInterval, _a, _b);
-		if (!_pInStream->SetStreamsManager(pApplication->GetStreamsManager())) {
+		bool registerStreamExpiry = (bool)parameters["registerStreamExpiry"];
+		if (!_pInStream->SetStreamsManager(pApplication->GetStreamsManager(), registerStreamExpiry)) {
 			FATAL("Unable to set the streams manager");
 			delete _pInStream;
 			_pInStream = NULL;

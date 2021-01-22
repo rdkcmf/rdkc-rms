@@ -40,7 +40,7 @@ uint32_t StreamsManager::GenerateUniqueId() {
 	return _uniqueIdGenerator++;
 }
 
-bool StreamsManager::RegisterStream(BaseStream *pStream) {
+bool StreamsManager::RegisterStream(BaseStream *pStream, bool registerStreamExpiry) {
 	//1. Test to see if we had registered this stream before
 	if (MAP_HAS1(_streamsByUniqueId, pStream->GetUniqueId())) {
 		FATAL("Stream %s already registered. Stream %s will not be registered",
@@ -56,7 +56,7 @@ bool StreamsManager::RegisterStream(BaseStream *pStream) {
 	_streamsByType[pStream->GetType()][pStream->GetUniqueId()] = pStream;
 	_streamsByName[pStream->GetName()][pStream->GetUniqueId()] = pStream;
 
-	_pApplication->SignalStreamRegistered(pStream);
+	_pApplication->SignalStreamRegistered(pStream, registerStreamExpiry);
 
 	_pApplication->GetEventLogger()->LogStreamCreated(pStream);
 

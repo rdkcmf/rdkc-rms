@@ -396,7 +396,7 @@ void BaseClientApplication::UnRegisterProtocol(BaseProtocol *pProtocol) {
     FINEST("Protocol %s unregistered from application: %s", STR(*pProtocol), STR(_name));
 }
 
-void BaseClientApplication::SignalStreamRegistered(BaseStream *pStream) {
+void BaseClientApplication::SignalStreamRegistered(BaseStream *pStream, bool registerStreamExpiry) {
 	if (pStream != NULL)
 		INFO("Stream %s registered to %s application `%s`", STR(*pStream),
 			IsEdge() ? "edge" : "origin", STR(_name));
