@@ -249,7 +249,7 @@ public:
 		@brief Displays the registered stream's ID, type, and name in the logs
 		@param pStream
 	 */
-	virtual void SignalStreamRegistered(BaseStream *pStream);
+	virtual void SignalStreamRegistered(BaseStream *pStream, bool registerStreamExpiry = true);
 
 	/*!
 		@brief Displays the unregistered stream's ID, type, and name in the logs

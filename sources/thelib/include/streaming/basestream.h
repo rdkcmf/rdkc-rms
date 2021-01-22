@@ -70,7 +70,7 @@ public:
 	BaseStream(BaseProtocol *pProtocol, uint64_t type, string name);
 	virtual ~BaseStream();
 
-	virtual bool SetStreamsManager(StreamsManager *pStreamsManager);
+	virtual bool SetStreamsManager(StreamsManager *pStreamsManager, bool registerStreamExpiry = true);
 	/*!
 		@brief Returns the stream manager. This is read-only
 	 */

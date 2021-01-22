@@ -638,6 +638,12 @@ bool WrtcConnection::CreateInStream(string streamName, StreamsManager *pSM) {
 	inboundParams["hasAudio"] = true;
 	inboundParams["hasVideo"] = false;
 
+	/* We should avoid registering the stream expiry for talk down inbound stream
+	   as the peer doesn't send audio packets to camera all the time and
+	   we should not tear down the stream due to the absence of traffic in the
+	   talkdown stream */
+	inboundParams["registerStreamExpiry"] = false;
+
 	if (!_pInboundConnectivity->Initialize(inboundParams)) {
                 FATAL("Unable to initialize inbound connectivity");
                 return false;

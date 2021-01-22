@@ -55,7 +55,7 @@ public:
 		@brief Registers the stream to the streams manager
 		@param pStream
 	 */
-	bool RegisterStream(BaseStream *pStream);
+	bool RegisterStream(BaseStream *pStream, bool registerStreamExpiry = true);
 
 	/*!
 		@brief Erases the stream to the streams manager

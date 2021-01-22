@@ -1815,9 +1815,9 @@ void OriginApplication::SignalUnLinkingStreams(BaseInStream *pStream,
     }
 }
 
-void OriginApplication::SignalStreamRegistered(BaseStream *pStream) {
+void OriginApplication::SignalStreamRegistered(BaseStream *pStream, bool registerStreamExpiry) {
 	//1. Do the normal routine
-	BaseClientApplication::SignalStreamRegistered(pStream);
+	BaseClientApplication::SignalStreamRegistered(pStream, registerStreamExpiry);
 
 #ifdef HAS_RTSP_LAZYPULL
 	Variant customParams = pStream->GetProtocol()->GetCustomParameters();
@@ -1887,9 +1887,17 @@ void OriginApplication::SignalStreamRegistered(BaseStream *pStream) {
 
     //2. Is this an inbound stream of type RTMP,RTP,LIVEFLV,TS or PASSTHROUGH?
     uint64_t streamType = pStream->GetType();
+    string stream_name = pStream->GetName();
+
     if (TAG_KIND_OF(streamType, ST_IN_NET)) {
         if (streamType != ST_IN_NET_EXT) {
-            RegisterExpireStream(pStream->GetUniqueId());
+            if (registerStreamExpiry) {
+                INFO("Registering stream expiry for `%s` stream", STR(stream_name));
+                RegisterExpireStream(pStream->GetUniqueId());
+            }
+            else {
+                WARN("Avoid registering stream expiry for `%s` stream", STR(stream_name));
+            }
         }
     }
 

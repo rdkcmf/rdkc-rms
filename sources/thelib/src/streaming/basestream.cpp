@@ -53,7 +53,7 @@ BaseStream::~BaseStream() {
 	}
 }
 
-bool BaseStream::SetStreamsManager(StreamsManager *pStreamsManager) {
+bool BaseStream::SetStreamsManager(StreamsManager *pStreamsManager, bool registerStreamExpiry) {
 	if (pStreamsManager == NULL) {
 		FATAL("no streams manager provided for stream %s(%"PRIu32")",
 				STR(tagToString(_type)), _uniqueId);
@@ -65,7 +65,7 @@ bool BaseStream::SetStreamsManager(StreamsManager *pStreamsManager) {
 		return false;
 	}
 	_pStreamsManager = pStreamsManager;
-	_pStreamsManager->RegisterStream(this);
+	_pStreamsManager->RegisterStream(this, registerStreamExpiry);
 	return true;
 }
 
