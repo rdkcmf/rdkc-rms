@@ -171,9 +171,10 @@ echo "PLATFORM_BREAKPAD_BINARY: $PLATFORM_BREAKPAD_BINARY"
 
 #generate debug symbols
 if [ -f $PLATFORM_BREAKPAD_BINARY ]; then
-	$PLATFORM_BREAKPAD_BINARY ./dist/$DIST_NAME/bin/rdkcms_debug > ./evostreamms.sym
-	mv -f ./evostreamms.sym  $PLATFORM_SYMBOL_PATH
-	echo "evostream debug symbol created"
+	$PLATFORM_BREAKPAD_BINARY ./dist/$DIST_NAME/bin/rdkcms_debug > ./rdkcms.sym
+	sed -i "1s/rdkcms_debug/rdkcms/" ./rdkcms.sym
+	mv -f ./rdkcms.sym $PLATFORM_SYMBOL_PATH
+	echo "rdkcms debug symbol created"
 fi
 
 # 5. cleanup things
