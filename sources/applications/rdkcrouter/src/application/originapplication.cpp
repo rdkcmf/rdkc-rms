@@ -5158,6 +5158,16 @@ bool OriginApplication::StartWebRTC(Variant & settings) {
 	}
 	//settings["serverCert"] = unb64(TEST_CERT);
 
+
+        // Get the key if available
+        if (_configuration.HasKeyChain(V_BOOL, false, 2, "webrtc", USE_PREBUILT_SSL_CERT)) {
+            settings[USE_PREBUILT_SSL_CERT] = (bool) (_configuration.GetValue("webrtc", false)
+                .GetValue(USE_PREBUILT_SSL_CERT, false));
+        } else {
+            // Default to false - Genearate key and cert
+            settings[USE_PREBUILT_SSL_CERT] = (bool)false;
+        }
+
 	// Check if we have a user-set rrsOverSsl
 	if (!settings.HasKey("rrsOverSsl", false)) {
 		// no user-set rrsOverSsl.  Just use the one in the

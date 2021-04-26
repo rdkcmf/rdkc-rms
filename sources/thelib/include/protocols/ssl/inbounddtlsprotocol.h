@@ -95,10 +95,12 @@ struct CryptoKeys {
 	map<uint32_t, sequenceDetails> packetSequences;
 };
 class OutboundConnectivity;
+class X509Certificate;
 class InboundDTLSProtocol
 : public BaseSSLProtocol {
 public:
-	InboundDTLSProtocol(bool includeSrtp = false);
+    InboundDTLSProtocol(bool includeSrtp = false);
+	InboundDTLSProtocol(X509Certificate *pCertificate,bool includeSrtp = false);
 	virtual ~InboundDTLSProtocol();
 	
 	virtual bool SignalInputData(IOBuffer &buffer, SocketAddress *pPeerAddress);

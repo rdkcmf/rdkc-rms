@@ -28,6 +28,7 @@
 #include "streaming/streamsmanager.h"
 #include "streaming/streamstypes.h"
 #include "utils/misc/timeprobemanager.h"
+#include "utils/misc/x509certificate.h"
 #include <openssl/evp.h>
 
 #define SRTP_MASTER_KEY_LEN 16 // 128 bits
@@ -84,6 +85,17 @@ InboundDTLSProtocol::InboundDTLSProtocol(bool includeSrtp)
 	_includeSrtp = includeSrtp;
 }
 
+InboundDTLSProtocol::InboundDTLSProtocol(X509Certificate *pCertificate, bool includeSrtp)
+	: BaseSSLProtocol(PT_INBOUND_DTLS), _srtpProfile(srtpAES128CM_SHA1_80) {
+	_isStarted = false;
+	_pOutboundConnectivity = NULL;
+	_streamName = "";
+	_mkiCheckDone = false;
+	_hasSrtp = false;
+	_includeSrtp = includeSrtp;
+	_pCertificate = pCertificate;
+}
+
 InboundDTLSProtocol::~InboundDTLSProtocol() {
 	if(_pGlobalSSLContext != NULL) {
 		SSL_CTX_free(_pGlobalSSLContext);
@@ -92,26 +104,22 @@ InboundDTLSProtocol::~InboundDTLSProtocol() {
 }
 
 bool InboundDTLSProtocol::InitGlobalContext(Variant &parameters) {
-	//1. Comput the hash on key/cert pair and see
+        //1. Comput the hash on key/cert pair and see
 	//if we have a global context with that hash
+	string dtlsmd5string = "Inbounddtlskeycertpair";
+	bool useprebuiltcert = false;
+
 	if (parameters["hash"] != V_STRING) {
-		if (parameters[CONF_SSL_KEY] != V_STRING
-				|| parameters[CONF_SSL_CERT] != V_STRING) {
-			FATAL("No key/cert provided");
-			return false;
-		}
-		_hash = md5((string) parameters[CONF_SSL_KEY]
-				+ (string) parameters[CONF_SSL_CERT], true);
+		_hash = md5(dtlsmd5string, true);
 		parameters["hash"] = _hash;
 	} else {
 		_hash = (string) parameters["hash"];
 	}
-	string key = parameters[CONF_SSL_KEY];
-	string cert = parameters[CONF_SSL_CERT];
+	useprebuiltcert = (bool) parameters["usePrebuiltCert"];
+
 	if( MAP_HAS1(_pGlobalContexts, _hash )) {
 		_pGlobalSSLContext = _pGlobalContexts[_hash];
 	}
-	
 
 	//2. Initialize the global context based on the specified
 	//key/cert pair if we don't have it
@@ -137,27 +145,49 @@ bool InboundDTLSProtocol::InitGlobalContext(Variant &parameters) {
 		SSL_CTX_set_options(_pGlobalSSLContext, flags);
 		// Enable use_srtp
 		SSL_CTX_set_tlsext_use_srtp(_pGlobalSSLContext, STR(_srtpProfile.profileName));
-		//4. setup the certificate
-		if (SSL_CTX_use_certificate_file(_pGlobalSSLContext, STR(cert),
-				SSL_FILETYPE_PEM) <= 0) {
-			FATAL("Unable to load certificate %s; Error(s) was: %s",
-					STR(cert),
-					STR(GetSSLErrors()));
-			SSL_CTX_free(_pGlobalSSLContext);
-			_pGlobalSSLContext = NULL;
-			return false;
-		}
 
-		//5. setup the private key
-		if (SSL_CTX_use_PrivateKey_file(_pGlobalSSLContext, STR(key),
-				SSL_FILETYPE_PEM) <= 0) {
-			FATAL("Unable to load key %s; Error(s) was: %s",
-					STR(key),
-					STR(GetSSLErrors()));
-			SSL_CTX_free(_pGlobalSSLContext);
-			_pGlobalSSLContext = NULL;
-			return false;
-		}
+		if(useprebuiltcert) {
+			string key = parameters[CONF_SSL_KEY];
+			string cert = parameters[CONF_SSL_CERT];
+
+			//4. setup the certificate
+                        if (SSL_CTX_use_certificate_file(_pGlobalSSLContext, STR(cert),
+                                        SSL_FILETYPE_PEM) <= 0) {
+                                FATAL("Unable to load certificate %s; Error(s) was: %s",
+						STR(cert),
+						STR(GetSSLErrors()));
+                                SSL_CTX_free(_pGlobalSSLContext);
+                                _pGlobalSSLContext = NULL;
+                                return false;
+                        }
+
+			//5. setup the private key
+			if (SSL_CTX_use_PrivateKey_file(_pGlobalSSLContext, STR(key),
+					SSL_FILETYPE_PEM) <= 0) {
+				FATAL("Unable to load key %s; Error(s) was: %s",
+						STR(key),
+						STR(GetSSLErrors()));
+				SSL_CTX_free(_pGlobalSSLContext);
+				_pGlobalSSLContext = NULL;
+				return false;
+			}
+		} else {
+                        //4. setup the certificate
+                        if (SSL_CTX_use_certificate(_pGlobalSSLContext, _evpcert) != 1) {
+                                FATAL("SSL_CTX_use_certificate(): %s.", ERR_error_string(ERR_get_error(), NULL));
+				SSL_CTX_free(_pGlobalSSLContext);
+				_pGlobalSSLContext = NULL;
+				return false;
+			}
+
+                        //5. setup the private key
+                        if (SSL_CTX_use_PrivateKey(_pGlobalSSLContext, _evpkey) != 1) {
+                                FATAL("SSL_CTX_use_PrivateKey(): %s.", ERR_error_string(ERR_get_error(), NULL));
+                                SSL_CTX_free(_pGlobalSSLContext);
+                                _pGlobalSSLContext = NULL;
+                                return false;
+                        }
+                }
 
 		//6. enable client certificate authentication
 		//TODO: add the callback to properly verify the peer
@@ -200,7 +230,7 @@ bool InboundDTLSProtocol::InitGlobalContext(Variant &parameters) {
 
 		//7. Store the global context for later usage
 		//_pGlobalContexts[_hash] = _pGlobalSSLContext;
-		INFO("SSL server context initialized");
+		INFO("SSL server context initialized in InboundDTLSProtocol");
 	}
 
 	if (parameters.HasKeyChain(V_STRING, false, 1, "streamName")) {

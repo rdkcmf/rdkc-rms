@@ -21,9 +21,16 @@
 
 #include "protocols/ssl/outbounddtlsprotocol.h"
 
+
 OutboundDTLSProtocol::OutboundDTLSProtocol()
 : BaseSSLProtocol(PT_OUTBOUND_DTLS) {
 	_isStarted = false;
+}
+
+OutboundDTLSProtocol::OutboundDTLSProtocol(X509Certificate *pCertificate)
+: BaseSSLProtocol(PT_OUTBOUND_DTLS) {
+	_isStarted = false;
+	_pCertificate = pCertificate;
 }
 
 OutboundDTLSProtocol::~OutboundDTLSProtocol() {
@@ -44,8 +51,11 @@ OutboundDTLSProtocol::~OutboundDTLSProtocol() {
 
 bool OutboundDTLSProtocol::InitGlobalContext(Variant &parameters) {
 	//1. get the hash which is always the same for client connections
+	bool useprebuiltcert = false;
 	_hash = "DtlsClientConnection";
+	useprebuiltcert = (bool) parameters["usePrebuiltCert"];
 	_pGlobalSSLContext = _pGlobalContexts[_hash];
+
 	if (_pGlobalSSLContext == NULL) {
 		//2. prepare the global ssl context
 
@@ -111,27 +121,44 @@ bool OutboundDTLSProtocol::InitGlobalContext(Variant &parameters) {
 				}
 			}
 		}
-		
-		string key;
-		string cert;
-		if ((parameters.HasKeyChain(V_STRING, false, 1, CONF_SSL_KEY))
-				&&(parameters.HasKeyChain(V_STRING, false, 1, CONF_SSL_CERT))) {
-			key = (string) parameters.GetValue(CONF_SSL_KEY, false);
-			cert = (string) parameters.GetValue(CONF_SSL_CERT, false);
-		}
 
-		//4. Load client key and certificate, if any
-		if ((key != "") && (cert != "")) {
-			// Load the certificate and key from file
-			if (SSL_CTX_use_certificate_file(_pGlobalSSLContext, STR(cert), SSL_FILETYPE_PEM) <= 0) {
-				FATAL("Unable to load certificate from file (%s)!", STR(cert));
-				SSL_CTX_free(_pGlobalSSLContext);
-				_pGlobalSSLContext = NULL;
-				return false;
+		if ( useprebuiltcert ) {
+			string key = "";
+			string cert = "";
+
+			if ((parameters.HasKeyChain(V_STRING, false, 1, CONF_SSL_KEY))
+					&&(parameters.HasKeyChain(V_STRING, false, 1, CONF_SSL_CERT))) {
+				key = (string) parameters.GetValue(CONF_SSL_KEY, false);
+				cert = (string) parameters.GetValue(CONF_SSL_CERT, false);
 			}
 
-			if (SSL_CTX_use_PrivateKey_file(_pGlobalSSLContext, STR(key), SSL_FILETYPE_PEM) <= 0) {
-				FATAL("Unable to load private key from file (%s)!", STR(key));
+			//4. Load client key and certificate, if any
+			if ((key != "") && (cert != "")) {
+				// Load the certificate and key from file
+				if (SSL_CTX_use_certificate_file(_pGlobalSSLContext, STR(cert), SSL_FILETYPE_PEM) <= 0) {
+					FATAL("Unable to load certificate from file (%s)!", STR(cert));
+					SSL_CTX_free(_pGlobalSSLContext);
+					_pGlobalSSLContext = NULL;
+					return false;
+				}
+
+				if (SSL_CTX_use_PrivateKey_file(_pGlobalSSLContext, STR(key), SSL_FILETYPE_PEM) <= 0) {
+					FATAL("Unable to load private key from file (%s)!", STR(key));
+					SSL_CTX_free(_pGlobalSSLContext);
+					_pGlobalSSLContext = NULL;
+					return false;
+				}
+			}
+		} else {
+                        if (SSL_CTX_use_certificate(_pGlobalSSLContext, _evpcert) != 1) {
+                                FATAL("SSL_CTX_use_certificate(): %s.", ERR_error_string(ERR_get_error(), NULL));
+                                SSL_CTX_free(_pGlobalSSLContext);
+                                _pGlobalSSLContext = NULL;
+                                return false;
+                        }
+
+			if (SSL_CTX_use_PrivateKey(_pGlobalSSLContext, _evpkey) != 1) {
+				FATAL("SSL_CTX_use_PrivateKey(): %s.", ERR_error_string(ERR_get_error(), NULL));
 				SSL_CTX_free(_pGlobalSSLContext);
 				_pGlobalSSLContext = NULL;
 				return false;

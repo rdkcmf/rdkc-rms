@@ -347,7 +347,8 @@ configuration=
 				rrsOverSsl=true,
 				sslKey="/etc/ssl/certs/server.key",
 				sslCert="/etc/ssl/certs/server.cert",
-				trustedCerts="/etc/ssl/certs/trustedCerts.db"
+				trustedCerts="/etc/ssl/certs/trustedCerts.db",
+				useprebuiltsslcert=false
 			},
 			--[[
 			drm={

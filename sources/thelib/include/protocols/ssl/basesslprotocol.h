@@ -40,6 +40,9 @@ protected:
 	uint8_t *_pReadBuffer;
 	uint32_t _maxOutBufferSize;
 	string _hash;
+	EVP_PKEY* _evpkey;
+	X509* _evpcert;
+	static X509Certificate* _pCertificate;
 public:
 	BaseSSLProtocol(uint64_t type);
 	virtual ~BaseSSLProtocol();

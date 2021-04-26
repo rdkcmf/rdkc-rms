@@ -320,7 +320,7 @@ private:
 	bool _dataChannelEstablished; // indicates if a channel has been created
 	bool _isStreamAttached; // indicates if there's an active stream attached
 
-	X509Certificate *_pCertificate;
+	static X509Certificate* _pCertificate;
 
 	IOBuffer _moovBuffer;
 

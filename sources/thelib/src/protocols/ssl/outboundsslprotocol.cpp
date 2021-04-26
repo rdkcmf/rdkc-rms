@@ -29,9 +29,14 @@
 
 uint32_t OutboundSSLProtocol::_clientConCounter = 0;
 
+
 OutboundSSLProtocol::OutboundSSLProtocol()
 : BaseSSLProtocol(PT_OUTBOUND_SSL) {
+}
 
+OutboundSSLProtocol::OutboundSSLProtocol(X509Certificate *pCertificate)
+: BaseSSLProtocol(PT_OUTBOUND_SSL) {
+	_pCertificate = pCertificate;
 }
 
 OutboundSSLProtocol::~OutboundSSLProtocol() {
@@ -57,6 +62,11 @@ bool OutboundSSLProtocol::InitGlobalContext(Variant &parameters) {
 	_hash = format("clientConnection%" PRIu32, _clientConCounter);
 	if (_clientConCounter == 0xffffffff)
 		_clientConCounter = 0;
+
+        bool useprebuiltcert = false;
+	if (parameters.HasKey(USE_PREBUILT_SSL_CERT)) {
+		useprebuiltcert = (bool) parameters[USE_PREBUILT_SSL_CERT];
+	}
 
 	//_pGlobalSSLContext = _pGlobalContexts[_hash];
 	if (_pGlobalSSLContext == NULL) {
@@ -143,14 +153,6 @@ bool OutboundSSLProtocol::InitGlobalContext(Variant &parameters) {
 				SSL_CTX_set_verify(_pGlobalSSLContext, SSL_VERIFY_PEER, NULL);
 			}
 		}
-		
-		string key;
-		string cert;
-		if ((parameters.HasKeyChain(V_STRING, false, 1, CONF_SSL_KEY))
-				&&(parameters.HasKeyChain(V_STRING, false, 1, CONF_SSL_CERT))) {
-			key = (string) parameters.GetValue(CONF_SSL_KEY, false);
-			cert = (string) parameters.GetValue(CONF_SSL_CERT, false);
-		}
 
 		// Flag to disable client side certs
 		bool ignoreCerts = false;
@@ -158,31 +160,64 @@ bool OutboundSSLProtocol::InitGlobalContext(Variant &parameters) {
 			ignoreCerts = (bool) (parameters.GetValue("ignoreCertsForOutbound", false));
 		}
 
-		//4. Load client key and certificate, if any
-		if ((key != "")&&(cert != "") && (ignoreCerts == false)) {
-			//5. Setup certificate from string
-			if (SSL_CTX_use_certificate_ASN1(_pGlobalSSLContext, (int) cert.size(),
-					(unsigned char *) cert.data()) <= 0) {
-				FATAL("Unable to load certificate %s; Error(s) was: %s",
-						STR(cert),
-						STR(GetSSLErrors()));
-				SSL_CTX_free(_pGlobalSSLContext);
-				_pGlobalSSLContext = NULL;
-				return false;
+		if(useprebuiltcert) {
+			string key;
+			string cert;
+			if ((parameters.HasKeyChain(V_STRING, false, 1, CONF_SSL_KEY))
+					&&(parameters.HasKeyChain(V_STRING, false, 1, CONF_SSL_CERT))) {
+				key = (string) parameters.GetValue(CONF_SSL_KEY, false);
+				cert = (string) parameters.GetValue(CONF_SSL_CERT, false);
 			}
 
-			//6. Setup private key
-			if (SSL_CTX_use_RSAPrivateKey_ASN1(_pGlobalSSLContext,
-					(unsigned char *) key.data(), (long) key.size()) <= 0) {
-				FATAL("Unable to load key %s; Error(s) was: %s",
-						STR(key),
-						STR(GetSSLErrors()));
-				SSL_CTX_free(_pGlobalSSLContext);
-				_pGlobalSSLContext = NULL;
-				return false;
-			}
+			//4. Load client key and certificate, if any
+			if ((key != "")&&(cert != "") && (ignoreCerts == false)) {
+				//5. Setup certificate from string
+				if (SSL_CTX_use_certificate_ASN1(_pGlobalSSLContext, (int) cert.size(),
+						(unsigned char *) cert.data()) <= 0) {
+					FATAL("Unable to load certificate %s; Error(s) was: %s",
+							STR(cert),
+							STR(GetSSLErrors()));
+					SSL_CTX_free(_pGlobalSSLContext);
+					_pGlobalSSLContext = NULL;
+					return false;
+				}
 
-		}
+				//6. Setup private key
+				if (SSL_CTX_use_RSAPrivateKey_ASN1(_pGlobalSSLContext,
+						(unsigned char *) key.data(), (long) key.size()) <= 0) {
+					FATAL("Unable to load key %s; Error(s) was: %s",
+							STR(key),
+							STR(GetSSLErrors()));
+					SSL_CTX_free(_pGlobalSSLContext);
+					_pGlobalSSLContext = NULL;
+					return false;
+				}
+			}
+		} else {
+			//Initialize certificate
+			if( NULL == _pCertificate) {
+				INFO("Initializing certificate in OutboundSSLProtocol");
+				_pCertificate = X509Certificate::GetInstance();
+			}
+                        EVP_PKEY *evpkey;
+                        _pCertificate->GetKey(&evpkey);
+                        X509 *evpcert;
+                        _pCertificate->GetCertificate(&evpcert);
+
+                        if (SSL_CTX_use_certificate(_pGlobalSSLContext, evpcert) != 1) {
+                                FATAL("SSL_CTX_use_certificate(): %s.", ERR_error_string(ERR_get_error(), NULL));
+                                SSL_CTX_free(_pGlobalSSLContext);
+                                _pGlobalSSLContext = NULL;
+                               return false;
+                        }
+
+                        if (SSL_CTX_use_PrivateKey(_pGlobalSSLContext, evpkey) != 1) {
+                                FATAL("SSL_CTX_use_PrivateKey(): %s.", ERR_error_string(ERR_get_error(), NULL));
+                                SSL_CTX_free(_pGlobalSSLContext);
+                                _pGlobalSSLContext = NULL;
+                                return false;
+                        }
+                }
 		//7. Store the global context for later usage
 		//_pGlobalContexts[_hash] = _pGlobalSSLContext;
 	}

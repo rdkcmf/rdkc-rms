@@ -28,6 +28,7 @@ class OutboundDTLSProtocol
 : public BaseSSLProtocol {
 public:
 	OutboundDTLSProtocol();
+	OutboundDTLSProtocol(X509Certificate *pCertificate);
 	virtual ~OutboundDTLSProtocol();
 	
 	virtual bool SignalInputData(IOBuffer &buffer, SocketAddress *pPeerAddress);

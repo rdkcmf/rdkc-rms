@@ -36,23 +36,28 @@ private:
 	std::string _sha256FingerprintString;
 private:
 	X509Certificate(const std::string &certPath, const std::string &keyPath);
+	X509Certificate();
 public:
 	virtual ~X509Certificate();
 	static X509Certificate *GetInstance(const std::string &certPath,
 			const std::string &keyPath);
-
+	static X509Certificate *GetInstance();
 	const std::string &GetCertPath() const;
 	const std::string &GetKeyPath() const;
 	const std::string &GetSHA1FingerprintString() const;
 	const std::string &GetSHA256FingerprintString() const;
-
 	static bool ComputeFingerprints(X509 *pX509, std::string *pSha1, std::string *pSha256);
 
 	X509 *GetCertificateDuplicate() const;
 	EVP_PKEY *GetCertificateKeyDuplicate() const;
+
+	bool GetCertificate(X509** x509p);
+	bool GetKey(EVP_PKEY**  evpkeyp);
+
 private:
 	bool Load();
 	bool Create();
+	bool Generate();
 	bool Save();
 	void Clear();
 };

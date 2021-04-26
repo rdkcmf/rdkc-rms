@@ -26,6 +26,7 @@
 
 map<string, SSL_CTX *> BaseSSLProtocol::_pGlobalContexts;
 bool BaseSSLProtocol::_libraryInitialized = false;
+X509Certificate* BaseSSLProtocol::_pCertificate = NULL;
 
 BaseSSLProtocol::BaseSSLProtocol(uint64_t type)
 : BaseProtocol(type) {
@@ -35,6 +36,8 @@ BaseSSLProtocol::BaseSSLProtocol(uint64_t type)
 	_pReadBuffer = new uint8_t[MAX_SSL_READ_BUFFER];
 	_type = type;
 	_hash = "";
+	_evpcert = NULL;
+	_evpkey = NULL;
 }
 
 BaseSSLProtocol::~BaseSSLProtocol() {
@@ -47,6 +50,14 @@ BaseSSLProtocol::~BaseSSLProtocol() {
 }
 
 bool BaseSSLProtocol::Initialize(Variant &parameters) {
+	//Initialize certificate
+	if( NULL == _pCertificate) {
+		INFO("Initializing certificate in BaseSSLProtocol");
+		_pCertificate = X509Certificate::GetInstance();
+	}
+	_pCertificate->GetKey(&_evpkey);
+	_pCertificate->GetCertificate(&_evpcert);
+
 	//1. Initialize the SSL library
 	if (!_libraryInitialized) {
 		//3. This is the first time we use the library. So we have to

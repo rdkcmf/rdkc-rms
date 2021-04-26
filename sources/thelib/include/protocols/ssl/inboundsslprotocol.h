@@ -29,6 +29,7 @@ class InboundSSLProtocol
 : public BaseSSLProtocol {
 public:
 	InboundSSLProtocol();
+	InboundSSLProtocol(X509Certificate *pCertificate);
 	virtual ~InboundSSLProtocol();
 protected:
 	virtual bool InitGlobalContext(Variant &parameters);

@@ -435,6 +435,7 @@
 #define CONF_PROTOCOL_API_RAW "apiRawMedia"
 #define CONF_PROTOCOL_API_RAW_LEN 11
 #define CONF_SSL_CERT "sslCert"
+#define USE_PREBUILT_SSL_CERT "useprebuiltsslcert"
 #define CONF_SSL_CERT_LEN 7
 #define CONF_SSL_CIPHERSUITE "cipherSuite"
 #define CONF_SSL_CIPHERSUITE_LEN 11

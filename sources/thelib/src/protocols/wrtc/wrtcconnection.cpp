@@ -60,6 +60,7 @@
 #define TOGGLE_COMMAND  "TogglingAudio"
 
 uint32_t WrtcConnection::_sessionCounter = 0;
+X509Certificate* WrtcConnection::_pCertificate = NULL;
 
 WrtcConnection::WrtcConnection()
 	: BaseRTSPProtocol(PT_WRTC_CNX) {
@@ -82,7 +83,6 @@ WrtcConnection::WrtcConnection()
 	_cmdReceived = "Unknown";
 	
 	_isStreamAttached = false;
-	_pCertificate = NULL;
 	_pOutboundConnectivity = NULL;
 	_pOutStream = NULL;
 	_commandChannelId = 0;
@@ -144,7 +144,6 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 	_cmdReceived = "Unknown";
 	
 	_isStreamAttached = false;
-	_pCertificate = NULL;
 
 	_customParameters = settings;
 	_streamChannelId = 0xFFFFFFFF;
@@ -183,6 +182,10 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 	_dtlsState = -1;
 
 	 RTCPReceiver::ResetNackStats();
+
+	if (!InitializeCertificate()) {
+		WARN("Failed to initialize certificates!");
+	}
 }
 
 WrtcConnection::~WrtcConnection() {
@@ -433,11 +436,6 @@ WrtcConnection::~WrtcConnection() {
 		_pSDPInfo = NULL;
 	}
 
-	if (_pCertificate != NULL) {
-		delete _pCertificate;
-		_pCertificate = NULL;
-	}
-
 	if (_pOutNetMP4Stream != NULL && _isStreamAttached) {
 		// Unregister from this stream
 		if (_fullMp4) {
@@ -468,7 +466,6 @@ void WrtcConnection::RemovePlaylist() {
 
 bool WrtcConnection::Initialize(Variant &parameters) {
 	_customParameters = parameters;
-
 	return true;
 }
 
@@ -1561,16 +1558,17 @@ bool WrtcConnection::InitializeDataChannel() {
 	settings["sctpMaxChannels"] = _pSDP->GetSCTPMaxChannels();
 	settings[CONF_SSL_CERT] = _customParameters[CONF_SSL_CERT];
 	settings[CONF_SSL_KEY] = _customParameters[CONF_SSL_KEY];
+	settings[USE_PREBUILT_SSL_CERT] = _customParameters[USE_PREBUILT_SSL_CERT];
 
 	//TODO: We should be spawning dtls and sctp protocols using the factory
 	// But for now, let's just instantiate them ourselves
 	if (_isControlled) {
 		 DEBUG("_isControlled enabled....creating outbound dtls");
-		_pDtls = new OutboundDTLSProtocol();
+		_pDtls = new OutboundDTLSProtocol(_pCertificate);
 		settings["sctpClient"] = true;
 	} else {
 		DEBUG("_isControlled disabled....creating inbound dtls");
-		_pDtls = new InboundDTLSProtocol(_useSrtp);
+		_pDtls = new InboundDTLSProtocol(_pCertificate,_useSrtp);
 		settings["sctpClient"] = false;
 	}
 
@@ -1629,7 +1627,7 @@ bool WrtcConnection::InitializeSrtp() {
 	settings[CONF_SSL_KEY] = _customParameters[CONF_SSL_KEY];
 	// Should be spawning dtls protocol using the factory
 	// but time is of the essence... let's worry about that later... ian
-	_pDtls = new InboundDTLSProtocol(true);
+	_pDtls = new InboundDTLSProtocol(_pCertificate,true);
 
 	_pDtls->Initialize(settings);
 
@@ -2005,29 +2003,43 @@ bool WrtcConnection::SendCommandData(string &message) {
 bool WrtcConnection::InitializeCertificate() {
 	if (_pCertificate != NULL) {
 		// If this has been instantiated already, use this
+		DEBUG("wrtc is using pregenerated ssl cert");
 		return true;
 	}
-	
-	string cert = "";
-	string key = "";
-	
-	// Get the certificate and key
-	if (_customParameters.HasKey(CONF_SSL_CERT)) {
-		cert = (string) _customParameters[CONF_SSL_CERT];
+
+        bool useprebuiltsslcert = false;
+
+	if (_customParameters.HasKey(USE_PREBUILT_SSL_CERT)) {
+		useprebuiltsslcert = (bool) _customParameters[USE_PREBUILT_SSL_CERT];
 	}
 
-	if (_customParameters.HasKey(CONF_SSL_KEY)) {
-		key = (string) _customParameters[CONF_SSL_KEY];
+	if(useprebuiltsslcert) {
+		INFO("wrtc is using prebuilt ssl cert");
+		string cert = "";
+		string key = "";
+
+		// Get the certificate and key
+		if (_customParameters.HasKey(CONF_SSL_CERT)) {
+			cert = (string) _customParameters[CONF_SSL_CERT];
+		}
+
+		if (_customParameters.HasKey(CONF_SSL_KEY)) {
+			key = (string) _customParameters[CONF_SSL_KEY];
+		}
+
+		//TODO: For now, we require a physical certificate
+		if ((key == "") || (cert == "")) {
+			FATAL("Certificate and key should be provided on the config file!");
+			return false;
+		}
+		_pCertificate = X509Certificate::GetInstance(cert, key);
+	} else {
+		INFO("wrtc is generating ssl cert");
+		_pCertificate = X509Certificate::GetInstance();
 	}
-	
-	//TODO: For now, we require a physical certificate
-	if ((key == "") || (cert == "")) {
-		FATAL("Certificate and key should be provided on the config file!");
-		return false;
-	}
-	
-	_pCertificate = X509Certificate::GetInstance(cert, key);
-	
+
+	INFO("Initializing certificate in WrtcConnection");
+
 	return true;
 }
 

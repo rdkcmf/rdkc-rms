@@ -29,6 +29,7 @@ class OutboundSSLProtocol
 : public BaseSSLProtocol {
 public:
 	OutboundSSLProtocol();
+	OutboundSSLProtocol(X509Certificate *pCertificate);
 	virtual ~OutboundSSLProtocol();
 protected:
 	virtual bool InitGlobalContext(Variant &parameters);

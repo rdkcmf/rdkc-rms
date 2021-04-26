@@ -25,7 +25,11 @@
 
 InboundSSLProtocol::InboundSSLProtocol()
 : BaseSSLProtocol(PT_INBOUND_SSL) {
+}
 
+InboundSSLProtocol::InboundSSLProtocol(X509Certificate *pCertificate)
+: BaseSSLProtocol(PT_INBOUND_SSL) {
+        _pCertificate = pCertificate;
 }
 
 InboundSSLProtocol::~InboundSSLProtocol() {
@@ -34,26 +38,26 @@ InboundSSLProtocol::~InboundSSLProtocol() {
 bool InboundSSLProtocol::InitGlobalContext(Variant &parameters) {
 	//1. Comput the hash on key/cert pair and see
 	//if we have a global context with that hash
-	string hash = "";
+	string md5string = "sslkeycertpair";
 	if (parameters["hash"] != V_STRING) {
-		if (parameters[CONF_SSL_KEY] != V_STRING
-				|| parameters[CONF_SSL_CERT] != V_STRING) {
-			FATAL("No key/cert provided");
-			return false;
-		}
-		hash = md5((string) parameters[CONF_SSL_KEY]
-				+ (string) parameters[CONF_SSL_CERT], true);
-		parameters["hash"] = hash;
+		_hash = md5(md5string, true);
+		parameters["hash"] = _hash;
 	} else {
-		hash = (string) parameters["hash"];
+		_hash = (string) parameters["hash"];
 	}
-	string key = parameters[CONF_SSL_KEY];
-	string cert = parameters[CONF_SSL_CERT];
-	_pGlobalSSLContext = _pGlobalContexts[hash];
+
+	if( MAP_HAS1(_pGlobalContexts, _hash )) {
+		_pGlobalSSLContext = _pGlobalContexts[_hash];
+	}
+
+	bool useprebuiltcert = false;
+	if (parameters.HasKey(USE_PREBUILT_SSL_CERT)) {
+		useprebuiltcert = (bool) parameters[USE_PREBUILT_SSL_CERT];
+	}
 
 	//2. Initialize the global context based on the specified
 	//key/cert pair if we don't have it
-	if (_pGlobalSSLContext == NULL) {
+	if (_pGlobalSSLContext == NULL)  {
 		//3. prepare the global ssl context
 		_pGlobalSSLContext = SSL_CTX_new(SSLv23_method());
 		if (_pGlobalSSLContext == NULL) {
@@ -61,28 +65,47 @@ bool InboundSSLProtocol::InitGlobalContext(Variant &parameters) {
 			return false;
 		}
 
-		//4. setup the certificate
-		if (SSL_CTX_use_certificate_file(_pGlobalSSLContext, STR(cert),
-				SSL_FILETYPE_PEM) <= 0) {
-			FATAL("Unable to load certificate %s; Error(s) was: %s",
-					STR(cert),
-					STR(GetSSLErrors()));
-			SSL_CTX_free(_pGlobalSSLContext);
-			_pGlobalSSLContext = NULL;
-			return false;
-		}
+		if(useprebuiltcert) {
+			string key = parameters[CONF_SSL_KEY];
+			string cert = parameters[CONF_SSL_CERT];
 
-		//5. setup the private key
-		if (SSL_CTX_use_PrivateKey_file(_pGlobalSSLContext, STR(key),
-				SSL_FILETYPE_PEM) <= 0) {
-			FATAL("Unable to load key %s; Error(s) was: %s",
-					STR(key),
-					STR(GetSSLErrors()));
-			SSL_CTX_free(_pGlobalSSLContext);
-			_pGlobalSSLContext = NULL;
-			return false;
-		}
+			//4. setup the certificate
+			if (SSL_CTX_use_certificate_file(_pGlobalSSLContext, STR(cert),
+					SSL_FILETYPE_PEM) <= 0) {
+				FATAL("Unable to load certificate %s; Error(s) was: %s",
+						STR(cert),
+						STR(GetSSLErrors()));
+				SSL_CTX_free(_pGlobalSSLContext);
+				_pGlobalSSLContext = NULL;
+				return false;
+			}
 
+			//5. setup the private key
+			if (SSL_CTX_use_PrivateKey_file(_pGlobalSSLContext, STR(key),
+					SSL_FILETYPE_PEM) <= 0) {
+				FATAL("Unable to load key %s; Error(s) was: %s",
+						STR(key),
+						STR(GetSSLErrors()));
+				SSL_CTX_free(_pGlobalSSLContext);
+				_pGlobalSSLContext = NULL;
+				return false;
+			}
+		} else {
+			//4. setup the certificate
+                        if (SSL_CTX_use_certificate(_pGlobalSSLContext, _evpcert) != 1) {
+                                FATAL("SSL_CTX_use_certificate(): %s.", ERR_error_string(ERR_get_error(), NULL));
+				SSL_CTX_free(_pGlobalSSLContext);
+				_pGlobalSSLContext = NULL;
+				return false;
+			}
+
+			if (SSL_CTX_use_PrivateKey(_pGlobalSSLContext, _evpkey) != 1) {
+				FATAL("SSL_CTX_use_PrivateKey(): %s.", ERR_error_string(ERR_get_error(), NULL));
+				SSL_CTX_free(_pGlobalSSLContext);
+				_pGlobalSSLContext = NULL;
+				return false;
+			}
+		}
 		//6. disable client certificate authentication
 		SSL_CTX_set_verify(_pGlobalSSLContext, SSL_VERIFY_NONE, NULL);
 
@@ -108,8 +131,8 @@ bool InboundSSLProtocol::InitGlobalContext(Variant &parameters) {
 		}
 
 		//7. Store the global context for later usage
-		_pGlobalContexts[hash] = _pGlobalSSLContext;
-		INFO("SSL server context initialized");
+		_pGlobalContexts[_hash] = _pGlobalSSLContext;
+		INFO("SSL server context initialized in InboundSSLProtocol");
 	}
 
 	return true;
