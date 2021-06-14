@@ -20,6 +20,7 @@
   <components>
     <rms>
       <dependencies>sdk,rdklogger,configMgr,openssl,sysapps,libsyswrapper,camera-hal</dependencies>
+      <is_coverity_supported>True</is_coverity_supported>
     </rms>
   </components>
 </environment>
