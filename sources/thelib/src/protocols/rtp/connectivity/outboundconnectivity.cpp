@@ -88,6 +88,7 @@ OutboundConnectivity::OutboundConnectivity(bool forceTcp, BaseProtocol *pProtoco
 	_rtpClient.isUdp = _rtpClient.isSRTP;
 
 	_firstFrameSent = false;
+	_firstFrameSentPostResume = true;
 }
 
 OutboundConnectivity::~OutboundConnectivity() {
@@ -671,6 +672,23 @@ bool OutboundConnectivity::FeedData(MSGHDR &message, double pts, double dts,
 				probSess += "firstFrame";
 				PROBE_STORE_TIME(STR(probSess),ts);
 				_firstFrameSent = true;
+			}
+
+      //RTP data has been sent post Resume command from the client
+      if(!_firstFrameSentPostResume && _pOutStream){
+        INFO( "First frame sent to player (RTP) post Resume Command from client" );
+        //Output the time it took to get to this point
+        std::stringstream sstrm;
+        sstrm << _pProtocol->GetId();
+        string probSess("wrtcplayback");
+        probSess += sstrm.str();
+        uint64_t ts = PROBE_TRACK_TIME_MS(STR(probSess) );
+        INFO("First frame sent event post Resume command from client:%"PRId64"", ts);
+        // Store the time taken to send the first frame as we need to log at the end of the session
+        probSess += "firstFramePostResume";
+        PROBE_STORE_TIME(STR(probSess),ts);
+        _firstFrameSentPostResume = true;
+
 			}
 		}
 		else {

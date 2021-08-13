@@ -115,6 +115,8 @@ private:
 	uint32_t _dummyValue;
 
 	bool _firstFrameSent;
+	bool _firstFrameSentPostResume;
+
 //	bool _pureRTP;
 
 public:
@@ -149,6 +151,8 @@ public:
 	void ReadyForSend();
 	bool PushMetaData(string const& vmfMetadata, int64_t pts);
 	void SendDirect(IOBuffer &data);
+	void SignalPause() { _firstFrameSentPostResume = true; }
+	void SignalResume() { _firstFrameSentPostResume = false; }
 private:
 	bool InitializePorts(SOCKET &dataFd, uint16_t &dataPort,
 			uint32_t &natDataId, SOCKET &RTCPFd, uint16_t &RTCPPort,

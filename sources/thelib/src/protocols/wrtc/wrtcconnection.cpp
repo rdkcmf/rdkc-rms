@@ -203,6 +203,22 @@ WrtcConnection::~WrtcConnection() {
 	probSess += sstrm.str();
 	uint64_t ts = PROBE_TRACK_TIME_MS(STR(probSess) );
 
+	string pauseProbSess(probSess);
+	string resumeProbSess(probSess);
+	string firstFramePostResumeProbSess(probSess);
+
+	// TS for client paused
+	pauseProbSess += "clientPaused";
+	uint64_t wconPauseTs = PROBE_GET_STORED_TIME(STR(pauseProbSess),true);
+
+	// TS for client resumed
+	resumeProbSess += "clientResumed";
+	uint64_t wconResumeTs = PROBE_GET_STORED_TIME(STR(resumeProbSess),true);
+
+	// TS for first frame sent post client resumed
+	firstFramePostResumeProbSess += "firstFramePostResume";
+	uint64_t wconFFPostResumeTs = PROBE_GET_STORED_TIME(STR(firstFramePostResumeProbSess),true);
+
 	//Retrieve the time to establish the wrtc connection and delete it after retrieval
 	probSess += "wrtcConn";
 	uint64_t wconTs = PROBE_GET_STORED_TIME(STR(probSess),true);
@@ -284,18 +300,18 @@ WrtcConnection::~WrtcConnection() {
 
 		PROBE_CLEAR_TIME(STR(probSess));
 
-		/* 	Session statistics Info : { RMS Session Statistics:  <RMS Client ID>, <RMS IPVersion>, <Player Client ID>, <Player IPVersion>, <Session Total duration>, <Time taken to send First Frame>, 
-							<Time taken to connect Peer>, <Relay/Reflex>, <Received Command from Player> }
+		 /*
+      Session statistics Info : { RMS Session Statistics:  <Player Client ID>, <Player IPVersion>, <Relay/Reflex>, <Received Command from Player>, <Session Total duration>, <Time the first frame send post Resume Command>, <Time the Resume Command Received>, <Time the Pause Command Received>, <Time taken to send First Frame>, <Time taken to connect Peer> }
 
-			RMS Session Candidate IPversion Type: { <RMS  IPVersion> ,<Player IPVersion> }
-		*/
+      RMS Session Candidate IPversion Type: { <RMS  IPVersion> ,<Player IPVersion> }
+    */
 		if(_bestStun) {
 			Candidate * pCan = _bestStun->GetBestCandidate();
 			if(pCan) {
-				INFO("RMS Session Statistics:%s,%s,%"PRIu64",%"PRIu64",%"PRIu64",%s,%s",
-					STR(_clientId), (pCan->IsIpv6() ? STR("IPV6") : STR("IPV4")), ts, wconFFTs, wconTs,
-					(pCan->IsRelay() ? STR("relay") : (pCan->IsReflex() ? STR("reflex") : STR("unknown"))),
-					STR(_cmdReceived));
+				INFO("RMS Session Statistics:%s,%s,%s,%s,%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"",
+					STR(_clientId), (pCan->IsIpv6() ? STR("IPV6") : STR("IPV4")),
+					(pCan->IsRelay() ? STR("relay") : (pCan->IsReflex() ? STR("reflex") : STR("unknown"))), STR(_cmdReceived),
+					ts, wconFFPostResumeTs, wconResumeTs, wconPauseTs, wconFFTs, wconTs);
 				/* INFO("RMS Session Statistics: %s, %s, %s, %s, %"PRIu64", %"PRIu64", %"PRIu64", %s, %s",
 					STR(_rmsClientId), (_bestStun && _bestStun->IsIpv6() ? STR("IPV6") : STR("IPV4")),
 					STR(_clientId), (pCan->IsIpv6() ? STR("IPV6") : STR("IPV4")), ts, wconFFTs, wconTs,
@@ -2266,7 +2282,18 @@ bool WrtcConnection::SendWebRTCCommand(Variant& settings) {
 }
 
 bool WrtcConnection::HandlePauseCommand() {
-	INFO("Stream playback paused");
+	//INFO("Stream playback paused");
+
+	// probe the TS for client pause command and store
+	std::stringstream sstrm;
+	sstrm << GetId();
+	string probSess("wrtcplayback");
+	probSess += sstrm.str();
+	uint64_t ts = PROBE_TRACK_TIME_MS(STR(probSess) );
+	INFO("Stream playback paused:%"PRId64"", ts);
+	probSess += "clientPaused";
+	PROBE_STORE_TIME(STR(probSess),ts);
+
 	BaseOutStream *pOutStream = GetOutboundStream();
 	if (pOutStream != NULL)
 		pOutStream->SignalPause();
@@ -2274,7 +2301,18 @@ bool WrtcConnection::HandlePauseCommand() {
 }
 
 bool WrtcConnection::HandleResumeCommand() {
-	INFO("Stream playback resumed");
+	//INFO("Stream playback resumed");
+
+	// probe the TS for client resume command and store
+	std::stringstream sstrm;
+	sstrm << GetId();
+	string probSess("wrtcplayback");
+	probSess += sstrm.str();
+	uint64_t ts = PROBE_TRACK_TIME_MS(STR(probSess) );
+	INFO("Stream playback resumed:%"PRId64"", ts);
+	probSess += "clientResumed";
+	PROBE_STORE_TIME(STR(probSess),ts);
+
 	BaseOutStream *pOutStream = GetOutboundStream();
 	if (pOutStream != NULL)
 		pOutStream->SignalResume();

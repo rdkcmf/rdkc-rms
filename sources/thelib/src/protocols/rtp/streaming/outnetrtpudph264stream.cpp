@@ -650,11 +650,13 @@ void OutNetRTPUDPH264Stream::UpdatePauseStatus(bool newPauseStatus) {
 
 bool OutNetRTPUDPH264Stream::SignalPause() {
 	UpdatePauseStatus(true);
+	_pConnectivity->SignalPause();
 	return true;
 }
 
 bool OutNetRTPUDPH264Stream::SignalResume() {
 	UpdatePauseStatus(false);
+	_pConnectivity->SignalResume();
 	return true;
 }
 
