@@ -27,7 +27,11 @@
 #include <sys/stat.h>
 
 #ifdef RMS_PLATFORM_RPI
+#if defined ( ENABLE_RMS_STREAM_WITH_PIPEWIRE )
+#include "api3rdparty/pip_rmsframe.h"
+#else
 #include "api3rdparty/gst_rmsframe.h"
+#endif
 #endif
 
 #define DUMP_G711 0
@@ -470,13 +474,19 @@ bool ApiProtocol::InitializeApi(Variant &config) {
        else //GST is enabled in RFC
        {
 #ifdef RMS_PLATFORM_RPI
+
+#if defined ( ENABLE_RMS_STREAM_WITH_PIPEWIRE )
+	    _streamFd = PIP_InitFrame();
+#else
             _streamFd = gst_InitFrame ( GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO );
+
+	    INFO("gst_InitFrame SUCCESS: AppNameVideo=%s, AppNameAudio=%s\n", GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO);
+#endif
             if(_streamFd < 0)
             {
                 INFO("GST Frame Init FAILED!\n");
                 return false;
             }
-            INFO("gst_InitFrame SUCCESS: AppNameVideo=%s, AppNameAudio=%s\n", GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO);
 #endif
         }
 
@@ -785,8 +795,12 @@ bool ApiProtocol::Terminate() {
 	else
 	{
 #ifdef RMS_PLATFORM_RPI
+#if defined (ENABLE_RMS_STREAM_WITH_PIPEWIRE)
+		PIP_TerminateFrame();
+#else
 		INFO("Invoking gst_TerminateFrame AppNameVideo=%s, AppNameAudio=%s\n", GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO);
 		gst_TerminateFrame( GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO );
+#endif
 #endif
 	}
 	return true;
@@ -977,8 +991,14 @@ bool ApiProtocol::FeedData() {
 #ifdef RMS_PLATFORM_RPI
             static bool frameDebug(false);
             static uint32_t framecount(0);
+
+#if defined ( ENABLE_RMS_STREAM_WITH_PIPEWIRE )
+	    PIP_FrameInfo frame_info;
+            int retVal = PIP_ReadFrameData ( &frame_info );
+#else
             GST_FrameInfo frame_info;
             int retVal = gst_ReadFrameData ( &frame_info );
+#endif
 
             if (retVal == 0) {
 
@@ -1001,7 +1021,13 @@ bool ApiProtocol::FeedData() {
                 _outputBuffer.ReadFromByte(header); // payload type header
                 _outputBuffer.ReadFromU64(((uint64_t)frame_info.frame_timestamp * 1000), true);
                 _outputBuffer.ReadFromBuffer((uint8_t *) frame_info.frame_ptr, frame_info.frame_size);
+
+#if defined ( ENABLE_RMS_STREAM_WITH_PIPEWIRE )
+		PIP_deleteBuffer();
+#else
                 deleteBuffer();
+#endif
+
                 return _pNearProtocol->SignalInputData(_outputBuffer);
                 } else if (retVal == 1) {
                         static uint32_t notreadycount(0);
