@@ -34,7 +34,6 @@
 #include "mediaformats/readers/streammetadataresolver.h"
 #include "utils/misc/timeprobemanager.h"
 
-uint32_t WrtcSigProtocol::_rrsConnections = 0; // count the number of connections
 const static string IPV6ONLYFLAGPATH = "/opt/rmsipv6only";
 
 WrtcSigProtocol::HeartBeatCheckTimer::HeartBeatCheckTimer(WrtcSigProtocol* wrtcSigProtocol)
@@ -81,8 +80,10 @@ WrtcSigProtocol::StunCredentialCheckTimer::~StunCredentialCheckTimer() {
 bool WrtcSigProtocol::StunCredentialCheckTimer::TimePeriodElapsed() {
 
 	WARN("Stun credentials timer has expired");
-	// Restart since this is a timeout
-        if (_wrtcSigProtocol) {
+	// Restart since this is a timeout and no active streaming
+	uint32_t sessioncounts = WrtcConnection::getSessionCounts() - 1;
+        INFO("sessioncounts are %d", sessioncounts);
+        if ( (_wrtcSigProtocol) && (0 == sessioncounts) ) {
 		WARN("Restarting RRS connection due to expiry of STUN credentials: %s,%s",STR(_wrtcSigProtocol->GetioSocketId()),STR(_wrtcSigProtocol->GetrrsIp()));
 		_wrtcSigProtocol->Shutdown(false, false);
 		_wrtcSigProtocol = NULL;
@@ -101,7 +102,6 @@ WrtcSigProtocol::WrtcSigProtocol()
 	_pWrtc = NULL;
 	_sdpMid = "data";	// this must match the SDP!!
 	_configId = 0;	// retrieve from parameters
-	_rrsConnections++;
 	_hasTurn = false;
 	_ipv6onlyflag = false;
 	
@@ -1264,18 +1264,6 @@ void WrtcSigProtocol::SetSdpMid(string &sdpMid) {
 }
 
 void WrtcSigProtocol::Shutdown(bool isPermanent, bool closeWebrtc) {
-	/*
-	 * This is no longer needed and actually causes issues when same room name usage
-	 * is allowed during heartbeat failure
-	 * 
-	if (!isPermanent) {
-		// Now check if we no longer have any connections to RRS
-		RespawnIfNeeded();
-	} else {
-		_rrsConnections--;
-	}
-	*/
-
 	// Do a proper clean-up of webrtc session
 	CleanUpWebrtc(closeWebrtc);
 
@@ -1365,15 +1353,6 @@ IOBuffer * WrtcSigProtocol::GetOutputBuffer() {
 	if (GETAVAILABLEBYTESCOUNT(_outBuffer) > 0)
 		return &_outBuffer;
 	return NULL;
-}
-
-void WrtcSigProtocol::RespawnIfNeeded() {
-	_rrsConnections--;
-	if (_rrsConnections < 1) {
-		// Make sure that we have at least one connection listening/waiting
-//		ReSpawn();
-		ReSpawn(true, false);
-	}
 }
 
 void WrtcSigProtocol::UnlinkConnection(WrtcConnection *connection, bool external) {

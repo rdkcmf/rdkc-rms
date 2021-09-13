@@ -97,6 +97,7 @@ public:
 	WrtcConnection();
 	WrtcConnection(WrtcSigProtocol * pSig, Variant & settings);
 	virtual ~WrtcConnection();
+	static uint32_t getSessionCounts();
 
 	void Start(bool hasNewCandidate = false);  // SigProtocol tells us to start ICE
 	void Stop();

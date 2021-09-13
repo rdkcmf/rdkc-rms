@@ -131,7 +131,6 @@ public:
 	string GetIceState();
 
 private:
-	static uint32_t _rrsConnections;
 	uint32_t _configId;	// save configuration ID
 	string _ioSocketId;
 	int _wsNumReq;	// number of times we sent the WebSocket Request
@@ -210,9 +209,7 @@ private:
 	// Misc.
 	bool GetQuotedSubString(string & src, string match, string & res);
 	bool GetJsonString(string & src, string key, string & res);
-	
-	void RespawnIfNeeded();
-	
+
 	// Connect to just received client ID from RRS
 	void ConnectToClient(string msgReceived);
 	

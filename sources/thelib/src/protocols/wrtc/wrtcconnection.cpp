@@ -188,6 +188,11 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 	}
 }
 
+uint32_t WrtcConnection::getSessionCounts()
+{
+	return _sessionCounter;
+}
+
 WrtcConnection::~WrtcConnection() {
 	_sessionCounter--;
 	
