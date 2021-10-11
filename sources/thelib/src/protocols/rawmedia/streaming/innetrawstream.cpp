@@ -162,6 +162,13 @@ bool InNetRawStream::FeedVideoData(uint8_t *pData, uint32_t dataLength, double t
 				}
 				break;
 			case NALU_TYPE_IDR:
+				// cache the I-frame
+				_cachedKeyFrame.IgnoreAll();
+				_cachedKeyFrame.ReadFromBuffer(begin, naluLength);
+				_cachedDTS = ts;
+				_cachedPTS = ts;
+				_cachedProcLen = 0;
+				_cachedTotLen = naluLength;
 			case NALU_TYPE_SLICE:
 #ifndef _HAS_XSTREAM_
 			case NALU_TYPE_SEI:
