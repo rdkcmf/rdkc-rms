@@ -141,7 +141,7 @@ function build()
 	elif [ $XCAM_MODEL == "XHC3" ]; then
 	 	echo "Buiding RMS for XHC3"
 		export ENABLE_XSTREAMER=true
-	 	sh createPackage.sh linaro-armv7ahf-2014.12-gcc4.9.1.cmk
+	 	sh createPackage.sh linaro-armv7ahf-2019.02-gcc7.4.cmk
 	else
 		echo "Building RMS for xCAM/iCAM2"
 		sh createPackage.sh linaro-armv7ahf-2014.12-gcc4.9.cmk
@@ -168,7 +168,7 @@ function install()
 	sh makeforLinarogcc7.1.sh
  elif [ $XCAM_MODEL == "XHC3" ]; then
         echo "Installing  RMS for XHC3"
-	sh makeforLinarogcc4.9.sh
+	sh makeforLinarogcc7.4.sh
  else
         echo "Installing RMS for xCAM/iCAM2"
         sh makeforLinarogcc4.9.sh
