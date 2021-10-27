@@ -143,14 +143,11 @@ WrtcSigProtocol::~WrtcSigProtocol() {
 		_pHBcheckTimer = NULL;
 	}
 
-        char* stunExpiryReconnet = NULL;
-        if (NULL !=(stunExpiryReconnet = getenv("STUNEXPIRYRECONNECT"))) {
-	    if (_pSCcheckTimer) {
+	if (_pSCcheckTimer) {
 		INFO("Deleting Stun credentials timer as webrtc protocol is destroyed");
                 _pSCcheckTimer->EnqueueForDelete();
                 _pSCcheckTimer = NULL;
-            }
-        }
+    }
 
 	_ipv6onlyflag = false;
 
@@ -163,11 +160,11 @@ WrtcSigProtocol::~WrtcSigProtocol() {
 //
 bool WrtcSigProtocol::Initialize(Variant &parameters) {
 //#ifdef WEBRTC_DEBUG
-    FINE("WrtcSigProtocol::Initialize, parms=%s", STR(parameters.ToString()));
+	FINE("WrtcSigProtocol::Initialize, parms=%s", STR(parameters.ToString()));
 //#endif
     _customParameters = parameters;
-    string ip;
-    uint16_t port = 0;
+	string ip;
+	uint16_t port = 0;
 	
     if (parameters.HasKey("rrsip", false)) {
     	ip = (string) parameters.GetValue("rrsip", false);
@@ -184,7 +181,7 @@ bool WrtcSigProtocol::Initialize(Variant &parameters) {
     } else {
 		FATAL("WrtcSigProtocol needs roomId parameter!");
 		return false;
-    }
+	}
 	
     if (parameters.HasKey("configId", false)) {
     	_configId = (uint32_t) parameters.GetValue("configId", false);
@@ -193,24 +190,22 @@ bool WrtcSigProtocol::Initialize(Variant &parameters) {
 		//TODO: shouldn't this return immediately then?
     }
 	
-    if (parameters.HasKey("token", false)) {
+	if (parameters.HasKey("token", false)) {
     	_rmsToken = (string) parameters.GetValue("token", false);
     }
 
-    // Start the timer for heartbeat check, 10-second interval
-    _pHBcheckTimer = new HeartBeatCheckTimer(this);
-    _pHBcheckTimer->EnqueueForTimeEvent(5);
+	// Start the timer for heartbeat check, 10-second interval
+	_pHBcheckTimer = new HeartBeatCheckTimer(this);
+	_pHBcheckTimer->EnqueueForTimeEvent(5);
 
-    char* stunExpiryReconnet = NULL;
-    if (NULL !=(stunExpiryReconnet = getenv("STUNEXPIRYRECONNECT"))) {
-        // Start the timer for stun credential check, interval has to be random and in the range of 20-23 hours
-        _pSCcheckTimer = new StunCredentialCheckTimer(this);
-        uint32_t timeout = STUN_CREDENTIALS_TIMEOUT_BASE + (rand() % STUN_CREDENTIALS_TIMEOUT_OFFSET);
-        INFO("Set timer for STUN credentials expiry. timeout value is %d!!!", timeout);
-        _pSCcheckTimer->EnqueueForTimeEvent(timeout);
-    }
+	// Start the timer for stun credential check, interval has to be random and in the range of 20-23 hours
+	_pSCcheckTimer = new StunCredentialCheckTimer(this);
+	uint32_t timeout = STUN_CREDENTIALS_TIMEOUT_BASE + (rand() % STUN_CREDENTIALS_TIMEOUT_OFFSET);
+	INFO("Set timer for STUN credentials expiry. timeout value is %d!!!", timeout);
+	_pSCcheckTimer->EnqueueForTimeEvent(timeout);
 	
-    INFO("Started WebRTCSigProtocol[%d], %s:%d, %s",(int)_configId, STR(ip), (int)port, STR(_roomId));
+    INFO("Started WebRTCSigProtocol[%d], %s:%d, %s",
+    		(int)_configId, STR(ip), (int)port, STR(_roomId));
 
     return true;
 }
@@ -556,14 +551,11 @@ bool WrtcSigProtocol::SignalInputData(IOBuffer &buffer) {
 			if (_clientId.empty() || (_clientId != clientId)) {
 				// Only do this if we have no existing connections
 				_clientId = clientId;
-                                char* stunExpiryReconnet = NULL;
-                                if (NULL !=(stunExpiryReconnet = getenv("STUNEXPIRYRECONNECT"))) {
-				    if (_pSCcheckTimer) {
+				if (_pSCcheckTimer) {
 					INFO("Deleting Stun credentials timer as client has joined");
 					_pSCcheckTimer->EnqueueForDelete();
 					_pSCcheckTimer = NULL;
-				    }
-                                }
+				}
 				ConnectToClient(msg); // connect to this client ID
 			} else {
 				WARN("Existing connection with %s exists.", STR(_clientId));
