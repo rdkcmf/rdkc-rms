@@ -30,9 +30,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <unistd.h>
-#include<gst/gst.h>
 #include<stdio.h>
-#include<gst/app/gstappsink.h>
 #include<iostream>
 #include <string.h>
 #include <sys/types.h>
@@ -46,6 +44,7 @@
 #include "RFCConfigAPI.h"
 #include "RFCCommon.h"
 #include <sys/timeb.h>
+#include "glib.h"
 
 typedef struct PIP_FrameInfo
 {
