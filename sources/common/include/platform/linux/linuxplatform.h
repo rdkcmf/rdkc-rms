@@ -216,7 +216,7 @@ bool deleteFile(string path);
 bool deleteFolder(string path, bool force);
 bool createFolder(string path, bool recursive);
 string getHostByName(string name);
-bool getAllHostByName(string name, vector<string> &result);
+bool getAllHostByName(string name, vector<string> &result, bool ipv4_only = false);
 bool isNumeric(string value);
 void split(string str, string separator, vector<string> &result);
 uint64_t getTagMask(uint64_t tag);

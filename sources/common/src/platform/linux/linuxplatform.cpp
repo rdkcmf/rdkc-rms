@@ -509,7 +509,7 @@ bool createFolder(string path, bool recursive) {
 }
 
 //get list of hosts addresses of stream socket
-bool getAllHostByName(string name, vector<string> &result) {
+bool getAllHostByName(string name, vector<string> &result, bool ipv4_only) {
 	// Setting this to false to ensure lookups are done by UDP
 	// If sethostent(true) an existing TCP connection would be used and
 	// kept open for DNS lookups.  This causes a major problem when the RMS
@@ -546,7 +546,11 @@ bool getAllHostByName(string name, vector<string> &result) {
 
 	memset(&hints, 0, sizeof hints);
 	// hints.ai_family = AF_INET; // use AF_INET6 to force IPv6
-	hints.ai_family = AF_UNSPEC; // use AF_INET6 to force IPv6
+	if (ipv4_only)
+		hints.ai_family = AF_INET;
+	else
+		hints.ai_family = AF_UNSPEC; // use AF_INET6 to force IPv6
+
 	hints.ai_socktype = SOCK_STREAM; // include only stream sockets
 
 	// if ( (rv = getaddrinfo( name.c_str() , NULL , NULL , &servinfo)) != 0)

@@ -233,6 +233,10 @@ public:
 	bool SetPeerState(PeerState peer_state);
 
 	string GetPeerState();
+
+	// to clear the already resolved STUN/TURN IP as TTL is expired
+	void ClearResolvedStunTurnIP();
+
 private:
 
 #ifdef RTMSG
@@ -355,6 +359,17 @@ private:
 	WrtcTimer * _pSlowTimer;
 	WrtcTimer * _pFastTimer;
 
+	class StunTurnDNSExpiryTimer
+	: public BaseTimerProtocol {
+	private:
+		WrtcConnection* _pWrtc;
+	public:
+		StunTurnDNSExpiryTimer(WrtcConnection* pWrtc);
+		virtual ~StunTurnDNSExpiryTimer();
+		virtual bool TimePeriodElapsed();
+	};
+	StunTurnDNSExpiryTimer* _pSTDNSExpiryTimer;
+
 	bool _waiting;
 	uint32_t _pendingFlag;
 	BaseInStream *_pPendingInStream;
@@ -371,6 +386,9 @@ private:
 #endif // WRTC_CAPAB_HAS_HEARTBEAT
 	
 	static uint32_t _sessionCounter;
+
+	string _stunTurnIpStr;
+	string _resolvedStunTurnIpStr;
 
 	/**
 	 * Resolves an domainName:port string into IP:port string format.

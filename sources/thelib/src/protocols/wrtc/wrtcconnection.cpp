@@ -66,6 +66,7 @@ WrtcConnection::WrtcConnection()
 	: BaseRTSPProtocol(PT_WRTC_CNX) {
 	_sessionCounter++;
 	_pFastTimer = _pSlowTimer = NULL;
+	_pSTDNSExpiryTimer = NULL;
 	_bestStun = NULL;
 	_started = false;
 	_stopping = false;
@@ -117,6 +118,9 @@ WrtcConnection::WrtcConnection()
 	_checkHSState = false;
 	_dtlsState = -1;
 
+	_stunTurnIpStr = "";
+	_resolvedStunTurnIpStr = "";
+
 	RTCPReceiver::ResetNackStats();
 
 }
@@ -127,6 +131,7 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 	_sessionCounter++;
 	_pSig = pSig;
 	_pFastTimer = _pSlowTimer = NULL;
+	_pSTDNSExpiryTimer = NULL;
 	_bestStun = NULL;
 	_started = false;
 	_stopping = false;
@@ -180,6 +185,9 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 
 	 _checkHSState = false;
 	_dtlsState = -1;
+
+	_stunTurnIpStr = "";
+	_resolvedStunTurnIpStr = "";
 
 	 RTCPReceiver::ResetNackStats();
 
@@ -405,6 +413,11 @@ WrtcConnection::~WrtcConnection() {
 	if (_pSlowTimer != NULL) {
 		delete _pSlowTimer;
 		_pSlowTimer = NULL;
+	}
+
+	if (_pSTDNSExpiryTimer != NULL) {
+		delete _pSTDNSExpiryTimer;
+		_pSTDNSExpiryTimer = NULL;
 	}
 
 	// Connection was established, streaming has started, and everyone was happy
@@ -969,6 +982,12 @@ bool WrtcConnection::FastTick() {
 			// Doesn't happen today, but should be a good future proofing
 			_pSig->Shutdown(false, true);
 		} else {
+			INFO("Enqueuing the timer for Stun/Turn IP TTL expiry 0x%x", _pSTDNSExpiryTimer);
+			if (_pSTDNSExpiryTimer) {
+				_pSTDNSExpiryTimer->EnqueueForDelete();
+				delete _pSTDNSExpiryTimer;
+				_pSTDNSExpiryTimer = NULL;
+			}
 			Candidate * pCan = _bestStun->GetBestCandidate();
 			if (!pCan) {
 
@@ -1168,11 +1187,52 @@ bool WrtcConnection::SetStunServer(string ipPortStr) {
 	//UPDATE: We should resolve any domains at this point to IP address
 	// Moved here so that we resolve only once
 	string resolvedIpPortStr;
-	if (!ResolveDomainName(ipPortStr, resolvedIpPortStr)) {
-		FATAL("Error setting STUN server!");
+
+	string ipStr = "";
+	uint16_t port = 0;
+	if (!SplitIpStr(ipPortStr, ipStr, port)) {
+		FATAL("Invalid STUN server format (%s)!", STR(ipPortStr));
 		return false;
 	}
-	INFO("Resolved STUN: %s", STR(resolvedIpPortStr));
+
+	//check whether the stun/turn ip is already resolved, if not resolve and proceed
+	if ( (_resolvedStunTurnIpStr != "") &&
+	     (ipStr == _stunTurnIpStr) ) {
+		stringstream ss;
+		string portStr;
+		ss << port;
+		ss >> portStr;
+		resolvedIpPortStr = _resolvedStunTurnIpStr + ":" + portStr;
+		INFO("Usign the already resolved STUN/TURN: %s", STR(resolvedIpPortStr));
+	}
+	else {
+		if (!ResolveDomainName(ipPortStr, resolvedIpPortStr)) {
+			FATAL("Error setting STUN server!");
+			return false;
+		}
+
+		_stunTurnIpStr = ipStr;
+
+		ipStr = "";
+		port = 0;
+		if (!SplitIpStr(resolvedIpPortStr, ipStr, port)) {
+			FATAL("Invalid STUN server format (%s)!", STR(ipPortStr));
+			return false;
+		}
+		_resolvedStunTurnIpStr = ipStr;
+		//Start the timer for Stun/Turn IPs TTL expiry
+		uint32_t timeout = 120;
+		if (_pSTDNSExpiryTimer == NULL) {
+			_pSTDNSExpiryTimer = new StunTurnDNSExpiryTimer(this);
+			INFO("Creating the timer for Stun/Turn IP TTL expiry 0x%x", _pSTDNSExpiryTimer);
+		}
+		if (_pSTDNSExpiryTimer) {
+			_pSTDNSExpiryTimer->EnqueueForTimeEvent(timeout);
+			INFO("Start the timer for Stun/Turn IP TTL expiry");
+		}
+
+		INFO("Resolved STUN: %s", STR(resolvedIpPortStr));
+	}
 
 	FOR_VECTOR(_stuns, i) {
 		_stuns[i]->SetStunServer(resolvedIpPortStr);
@@ -1183,12 +1243,54 @@ bool WrtcConnection::SetStunServer(string ipPortStr) {
 bool WrtcConnection::SetTurnServer(string username, string credential, string ipPort) {
 	//UPDATE: We should resolve any domains at this point to IP address
 	// Moved here so that we resolve only once
-        string resolvedIpPortStr;
-	if (!ResolveDomainName(ipPort, resolvedIpPortStr)) {
-		FATAL("Error setting STUN server!");
+	string resolvedIpPortStr;
+
+	string ipStr = "";
+	uint16_t port = 0;
+	if (!SplitIpStr(ipPort, ipStr, port)) {
+		FATAL("Invalid STUN server format (%s)!", STR(ipPort));
 		return false;
 	}
-	INFO("Resolved TURN: %s", STR(resolvedIpPortStr));
+
+	//check whether the stun/turn ip is already resolved, if not resolve and proceed
+	if ( (_resolvedStunTurnIpStr != "") &&
+	     (ipStr == _stunTurnIpStr) ) {
+		stringstream ss;
+		string portStr;
+		ss << port;
+		ss >> portStr;
+		resolvedIpPortStr = _resolvedStunTurnIpStr + ":" + portStr;
+		INFO("Usign the already resolved STUN/TURN: %s", STR(resolvedIpPortStr));
+	}
+	else {
+		if (!ResolveDomainName(ipPort, resolvedIpPortStr)) {
+			FATAL("Error setting STUN server!");
+			return false;
+		}
+		_stunTurnIpStr = ipStr;
+
+		ipStr = "";
+		port = 0;
+		if (!SplitIpStr(resolvedIpPortStr, ipStr, port)) {
+			FATAL("Invalid STUN server format (%s)!", STR(ipPort));
+			return false;
+		}
+
+		_resolvedStunTurnIpStr = ipStr;
+
+		//Start the timer for Stun/Turn IPs TTL expiry
+		uint32_t timeout = 120;
+		if (_pSTDNSExpiryTimer == NULL) {
+			_pSTDNSExpiryTimer = new StunTurnDNSExpiryTimer(this);
+			INFO("Creating the timer for Stun/Turn IP TTL expiry 0x%x", _pSTDNSExpiryTimer);
+		}
+		if (_pSTDNSExpiryTimer) {
+			_pSTDNSExpiryTimer->EnqueueForTimeEvent(timeout);
+			INFO("Start the timer for Stun/Turn IP TTL expiry");
+		}
+
+		INFO("Resolved TURN: %s", STR(resolvedIpPortStr));
+	}
 
 	FOR_VECTOR(_stuns, i) {
 		_stuns[i]->SetTurnServer(username, credential, resolvedIpPortStr);
@@ -1430,6 +1532,29 @@ WrtcConnection::WrtcTimer * WrtcConnection::WrtcTimer
 // the timer override
 bool WrtcConnection::WrtcTimer::TimePeriodElapsed() {
 	return _pWrtc->Tick();
+}
+
+WrtcConnection::StunTurnDNSExpiryTimer::StunTurnDNSExpiryTimer(WrtcConnection* pWrtc)
+: BaseTimerProtocol() {
+	_pWrtc = pWrtc;
+}
+
+WrtcConnection::StunTurnDNSExpiryTimer::~StunTurnDNSExpiryTimer() {
+}
+
+bool WrtcConnection::StunTurnDNSExpiryTimer::TimePeriodElapsed() {
+
+	DEBUG("Stun/TURN TTL timer has expired");
+	if ( _pWrtc ) {
+		DEBUG("Clearing the already resolved Stun/Turn IP");
+		_pWrtc->ClearResolvedStunTurnIP();
+	}
+	return true;
+}
+
+void WrtcConnection::ClearResolvedStunTurnIP() {
+	_stunTurnIpStr = "";
+	_resolvedStunTurnIpStr = "";
 }
 
 //
@@ -2451,9 +2576,12 @@ bool WrtcConnection::ResolveDomainName(string domainName, string &resolvedName) 
 	string ip;
 	vector <string> addrList;
 
-	if(!getAllHostByName(domain, addrList)) {
-		FATAL("Could not resolve STUN server (%s)!", STR(domain));
-		return false;
+	if(!getAllHostByName(domain, addrList, true)) {
+		WARN("Could not resolve STUN server (%s) for ipv4 only addresses hence trying for both ipv4/ipv6", STR(domain));
+		if(!getAllHostByName(domain, addrList)) {
+			FATAL("Could not resolve STUN server (%s)!", STR(domain));
+			return false;
+		}
 	}
 
 	INFO("List of resolved ips for %s are: ", STR(domain));
