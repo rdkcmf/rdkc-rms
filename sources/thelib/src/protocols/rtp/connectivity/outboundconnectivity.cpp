@@ -644,7 +644,9 @@ bool OutboundConnectivity::FeedData(MSGHDR &message, double pts, double dts,
 
 				if (_pProtocol->GetType() == PT_WRTC_CNX) {
 					WrtcConnection *pWrtc = (WrtcConnection *)_pProtocol;
-					INFO("Peer State Transition: %s-active", STR(pWrtc->GetPeerState()));
+					if (pWrtc->GetPeerState() != "")
+						INFO("Peer State Transition: %s-active", STR(pWrtc->GetPeerState()));
+
 					if (pWrtc->SetPeerState(WRTC_PEER_ACTIVE)) {
 						INFO( "Peer State has been set to \"active\"" );
 					}

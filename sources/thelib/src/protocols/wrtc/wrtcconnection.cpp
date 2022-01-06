@@ -2554,7 +2554,7 @@ string WrtcConnection::GetPeerState() {
 		return _pSig->GetPeerState();
 	}
 	else {
-		return NULL;
+		return "";
 	}
 }
 
