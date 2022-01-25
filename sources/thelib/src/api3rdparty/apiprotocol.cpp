@@ -27,11 +27,7 @@
 #include <sys/stat.h>
 
 #ifdef RMS_PLATFORM_RPI
-#if defined ( ENABLE_RMS_STREAM_WITH_PIPEWIRE )
-#include "api3rdparty/pip_rmsframe.h"
-#else
 #include "api3rdparty/gst_rmsframe.h"
-#endif
 #endif
 
 #define DUMP_G711 0
@@ -475,8 +471,8 @@ bool ApiProtocol::InitializeApi(Variant &config) {
        {
 #ifdef RMS_PLATFORM_RPI
 
-#if defined ( ENABLE_RMS_STREAM_WITH_PIPEWIRE )
-	    _streamFd = PIP_InitFrame();
+#if defined ( ENABLE_PIPEWIRE )
+            _streamFd = pws_StreamInit(&pwsdata);
 #else
             _streamFd = gst_InitFrame ( GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO );
 
@@ -795,8 +791,9 @@ bool ApiProtocol::Terminate() {
 	else
 	{
 #ifdef RMS_PLATFORM_RPI
-#if defined (ENABLE_RMS_STREAM_WITH_PIPEWIRE)
-		PIP_TerminateFrame();
+#if defined (ENABLE_PIPEWIRE)
+		pws_StreamClose(&pwsdata,&frame_info);
+		_streamFd = -1;
 #else
 		INFO("Invoking gst_TerminateFrame AppNameVideo=%s, AppNameAudio=%s\n", GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO);
 		gst_TerminateFrame( GST_RMS_APPNAME_VIDEO, GST_RMS_APPNAME_AUDIO );
@@ -992,9 +989,8 @@ bool ApiProtocol::FeedData() {
             static bool frameDebug(false);
             static uint32_t framecount(0);
 
-#if defined ( ENABLE_RMS_STREAM_WITH_PIPEWIRE )
-	    PIP_FrameInfo frame_info;
-            int retVal = PIP_ReadFrameData ( &frame_info );
+#if defined ( ENABLE_PIPEWIRE )
+            int retVal = pws_ReadFrame( &pwsdata , &frame_info);
 #else
             GST_FrameInfo frame_info;
             int retVal = gst_ReadFrameData ( &frame_info );
@@ -1022,21 +1018,14 @@ bool ApiProtocol::FeedData() {
                 _outputBuffer.ReadFromU64(((uint64_t)frame_info.frame_timestamp * 1000), true);
                 _outputBuffer.ReadFromBuffer((uint8_t *) frame_info.frame_ptr, frame_info.frame_size);
 
-#if defined ( ENABLE_RMS_STREAM_WITH_PIPEWIRE )
-		PIP_deleteBuffer();
-#else
+#if !defined ( ENABLE_PIPEWIRE )
                 deleteBuffer();
 #endif
 
                 return _pNearProtocol->SignalInputData(_outputBuffer);
-                } else if (retVal == 1) {
+                } else {
                         static uint32_t notreadycount(0);
                         if( frameDebug && (notreadycount++%10 == 0)) INFO("No frame ready. ReturnVal: %d", retVal);
-                } else {
-                        static uint32_t failcount(0);
-                        if( frameDebug && (failcount++%10 == 0)) INFO("rdkc_stream_read_frame failed! ReturnVal: %d", retVal);
-                        EnqueueForDelete(); // do a clean-up in case of read frame failure
-                        return false;
                 }
 #endif
         }

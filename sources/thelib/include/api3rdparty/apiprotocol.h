@@ -36,6 +36,10 @@
 #include "netio/epoll/iohandler.h"
 #endif /* NET_EPOLL */
 
+#if defined ( ENABLE_PIPEWIRE )
+#include "pwstream.h"
+#endif
+
 /* Enable AAC Support */
 //#define AAC_SUPPORT
 
@@ -139,6 +143,10 @@ private:
 #endif //HAS_DOWNSAMPLE
 #endif
 
+#if defined ( ENABLE_PIPEWIRE )
+struct pws_data pwsdata = { 0 };
+pws_frameInfo frame_info = { 0 };
+#endif /* ENABLE_PIPEWIRE */
 };
 
 #endif	/* _APIPROTOCOL_H */
