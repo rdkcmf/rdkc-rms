@@ -984,7 +984,6 @@ bool WrtcConnection::FastTick() {
 		} else {
 			INFO("Enqueuing the timer for Stun/Turn IP TTL expiry 0x%x", _pSTDNSExpiryTimer);
 			if (_pSTDNSExpiryTimer) {
-				_pSTDNSExpiryTimer->EnqueueForDelete();
 				delete _pSTDNSExpiryTimer;
 				_pSTDNSExpiryTimer = NULL;
 			}
