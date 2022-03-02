@@ -130,6 +130,9 @@ public:
 
 	string GetIceState();
 
+	static uint32_t _activeClients;
+	static uint32_t GetActiveClientsCount() { return _activeClients; }
+
 private:
 	uint32_t _configId;	// save configuration ID
 	string _ioSocketId;

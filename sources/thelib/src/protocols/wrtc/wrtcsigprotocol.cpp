@@ -35,6 +35,7 @@
 #include "utils/misc/timeprobemanager.h"
 
 const static string IPV6ONLYFLAGPATH = "/opt/rmsipv6only";
+uint32_t WrtcSigProtocol::_activeClients = 0;
 
 WrtcSigProtocol::HeartBeatCheckTimer::HeartBeatCheckTimer(WrtcSigProtocol* wrtcSigProtocol)
 : BaseTimerProtocol() {
@@ -150,7 +151,6 @@ WrtcSigProtocol::~WrtcSigProtocol() {
     }
 
 	_ipv6onlyflag = false;
-
 	// Do a proper clean-up
 	CleanUpWebrtc(false);
 }
@@ -484,7 +484,7 @@ bool WrtcSigProtocol::SignalInputData(IOBuffer &buffer) {
 //#ifdef WEBRTC_DEBUG
 			INFO("Wrtc Client Removed (left)");
 //#endif
-
+			_activeClients--;
 			// Log Peer state
 			if (_peerState != WRTC_PEER_CLOSED) {
 				INFO("The peer state is %s", STR(GetPeerState()));
@@ -522,6 +522,7 @@ bool WrtcSigProtocol::SignalInputData(IOBuffer &buffer) {
 		else if (msg.find("clientJoined") != string::npos) {
 			PROBE_CLEAR_TIME("wrtcplayback");
 			INFO("Client joined!");
+			_activeClients++;
 			INFO("Roomid:%s", STR(_roomId));
 			PROBE_POINT("webrtc", "sess1", "client_join", false);
 			// Get the client id

@@ -385,8 +385,9 @@ WrtcConnection::~WrtcConnection() {
 		}
 
 		// Use the session counter to report the instances
-		if (_sessionCounter) {
-			INFO("Number of active client connections: %"PRIu32, (_sessionCounter - 1));
+		int no_of_clients  = WrtcSigProtocol::GetActiveClientsCount();
+		if (no_of_clients) {
+			INFO("Number of active client connections: %d", no_of_clients);
 		} else {
 			INFO("No active webrtc connections.");
 		}
@@ -1022,9 +1023,9 @@ bool WrtcConnection::FastTick() {
 				//adding token to identify this specific val
 				probSess += "wrtcConn";
 				PROBE_STORE_TIME(probSess,ts);
-
-				if (_sessionCounter) {
-					INFO("Number of active client connections: %"PRIu32, (_sessionCounter - 1));
+				int no_of_clients  = WrtcSigProtocol::GetActiveClientsCount();
+				if (no_of_clients) {
+					INFO("Number of active client connections: %d", no_of_clients);
 				} else {
 					INFO("No active webrtc connections.");
 				}
@@ -2601,4 +2602,5 @@ bool WrtcConnection::ResolveDomainName(string domainName, string &resolvedName) 
 	resolvedName = SocketAddress::getIPwithPort(ip, port);
 	return true;
 }
+
 #endif // HAS_PROTOCOL_WEBRTC
