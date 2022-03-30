@@ -318,7 +318,7 @@ WrtcConnection::~WrtcConnection() {
 			if(pCan) {
 				INFO("RMS Session Statistics:%s,%s,%s,%s,%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"",
 					STR(_clientId), (pCan->IsIpv6() ? STR("IPV6") : STR("IPV4")),
-					(pCan->IsRelay() ? STR("relay") : (pCan->IsReflex() ? STR("reflex") : STR("unknown"))), STR(_cmdReceived),
+					(pCan->IsRelay() ? STR("relay") : (pCan->IsReflex() ? STR("reflex") : STR("host"))), STR(_cmdReceived),
 					ts, wconFFPostResumeTs, wconResumeTs, wconPauseTs, wconFFTs, wconTs);
 				/* INFO("RMS Session Statistics: %s, %s, %s, %s, %"PRIu64", %"PRIu64", %"PRIu64", %s, %s",
 					STR(_rmsClientId), (_bestStun && _bestStun->IsIpv6() ? STR("IPV6") : STR("IPV4")),
@@ -1985,8 +1985,8 @@ bool WrtcConnection::HandleDataChannelMessage(Variant &msg) {
 			GetEventLogger()->LogWebRTCCommandReceived(msg);
 			string command = lowerCase((string)msg["payload"]["command"]);
 			string argument = (string)msg["payload"]["argument"];
-			_cmdReceived.assign(argument);
 			if (command == "stop") {
+				_cmdReceived.assign(argument);
 				INFO("Received Stop Command: %s", STR(argument));
 				// We tear down this session if we received this command from the player
 				EnqueueForDelete();
