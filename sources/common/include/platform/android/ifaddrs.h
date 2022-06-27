@@ -19,6 +19,11 @@
 ##########################################################################
 **/
 #ifdef ANDROID
+/**
+#Copyright (c) 1995, 1999
+#Berkeley Software Design, Inc.  All rights reserved.
+#Licensed under the BSD-1 license
+**/
 #ifndef	_IFADDRS_H_
 #define	_IFADDRS_H_
 
