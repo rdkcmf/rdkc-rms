@@ -28,6 +28,7 @@
 #define	_WRTCCONNECTION_H
 
 #define WRTC_CAPAB_STR_HAS_HEARTBEAT "hasHeartbeat"
+#define SESSION_COUNTER_FILE "/tmp/.session_counter"
 
 #include "protocols/rtp/basertspprotocol.h"
 #include "protocols/rtp/rtcpreceiver.h"
@@ -144,44 +145,44 @@ public:
 
 	/**
 	 * Event triggered when SCTP data channel is created.
-	 * 
+	 *
      * @param name Name of channel
      * @param id ID of channel
-     * @return 
+     * @return
      */
 	bool SignalDataChannelCreated(const string &name, uint32_t id);
 
 	/**
 	 * Even triggered when a data is available on a data channel.
-	 * 
+	 *
      * @param id Channel ID
      * @param pBuffer Pointer to the actual data
      * @param size Length of the data in bytes
-     * @return 
+     * @return
      */
 	bool SignalDataChannelInput(uint32_t id, const uint8_t *pBuffer, const uint32_t size);
-	
+
 	/**
 	 * Event triggered when channel is ready for sending out data
-	 * 
+	 *
      * @param id Channel ID
-     * @return 
+     * @return
      */
 	bool SignalDataChannelReady(uint32_t id);
-	
+
 	/**
 	 * Event triggered when a data channel is closed.
-	 * 
+	 *
      * @param id Channel ID
-     * @return 
+     * @return
      */
 	bool SignalDataChannelClosed(uint32_t id);
 
 	/**
 	 * Handles metadata push through webrtc.
-	 * 
+	 *
 	 * @param metadata
-	 * @return 
+	 * @return
 	 */
 	bool PushMetaData(Variant &metadata);
 
@@ -196,32 +197,32 @@ public:
 	bool SetupLazyPull(string const &streamName);
 	bool HandlePauseCommand();
 	bool HandleResumeCommand();
-	
+
 	/**
 	 * Sets the peer's supported features of this webrtc session.
-	 * 
+	 *
 	 * @param capabilities List of features separated by comma
 	 */
 	void SetPeerCapabilities(string capabilities);
-	
+
 	/**
-	 * Retrieves the set of supported features 
-	 * 
+	 * Retrieves the set of supported features
+	 *
 	 * @param isRms Determines if capabilities requested is that of RMS (player if false)
 	 * @return Set of supported features.
 	 */
 	Capabilities GetCapabilities(bool isRms);
-	
+
 	/**
 	 * Removes the ICE instance from the list that webrtc session manages.
-	 * 
+	 *
 	 * @param pIce ICE protocol instance to remove
 	 */
 	void RemoveIceInstance(BaseIceProtocol *pIce);
-	
+
 	/**
 	 * Indicates if this webrtc session has started with the peering process.
-	 * 
+	 *
 	 * @return true if peering has started, false otherwise
 	 */
 	bool HasStarted() { return _started; };
@@ -246,20 +247,20 @@ private:
 
 	/**
 	 * Initializes DTLS and SCTP that will be used for our data channel
-	 * 
-     * @return 
+	 *
+     * @return
      */
 	void HasAudio(bool value);
 	void HasVideo(bool value);
 	bool InitializeDataChannel();
-	
+
 	bool HandleDataChannelMessage(Variant &msg);
 	bool SendStreamAsMp4(string &streamName);
 	bool SendCommandData(string &message);
-	
+
 	bool SpawnStunProtocols();
 	bool GetInterfaceIps(vector<string> & ips);
-	
+
 	bool InitializeCertificate();
 
 	bool InitializeSrtp();
@@ -278,6 +279,8 @@ private:
 	 */
 	void SetRmsCapabilities();
 
+        void WriteSessionCount();
+
 	bool _started;
 	bool _isControlled;
 	bool _stopping;
@@ -287,7 +290,7 @@ private:
 	// to check the state of ssl handshake
 	bool _checkHSState;
 	int8_t _dtlsState;
-	
+
 	uint8_t _slowTimerCounter;
 
 	// SDP stuff
@@ -337,11 +340,11 @@ private:
 	bool _useSrtp;
 
 	RTCPReceiver _rtcpReceiver;
-	
+
 	// Capabilities
 	Capabilities _capabPeer;
 	Capabilities _capabRms;
-	
+
 	//
 	// Timer Stuff
 	//
@@ -377,14 +380,14 @@ private:
 	void StartFastTimer();
 	void StartSlowTimer();
 	void RemovePlaylist();
-	
+
 	uint32_t _ticks;
 #ifdef WRTC_CAPAB_HAS_HEARTBEAT
 	uint8_t _hbNoAckCounter;
 	bool SendHeartbeat();
 	void ProcessHeartbeat();
 #endif // WRTC_CAPAB_HAS_HEARTBEAT
-	
+
 	static uint32_t _sessionCounter;
 
 	string _stunTurnIpStr;
@@ -392,7 +395,7 @@ private:
 
 	/**
 	 * Resolves an domainName:port string into IP:port string format.
-	 * 
+	 *
 	 * @param domainName Domain name:port to resolve
 	 * @param resolvedName Resolved string format
 	 * @return true on success, false otherwise

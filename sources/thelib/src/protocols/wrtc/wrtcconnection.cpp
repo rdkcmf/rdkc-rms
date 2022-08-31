@@ -24,6 +24,8 @@
 **/
 
 #ifdef HAS_PROTOCOL_WEBRTC
+#include <fstream>
+
 #include "protocols/wrtc/wrtcsdp.h"
 #include "protocols/rtp/sdp.h"
 #include "protocols/wrtc/wrtcconnection.h"
@@ -82,7 +84,7 @@ WrtcConnection::WrtcConnection()
 	_clientId = "";
 	_rmsClientId = "";
 	_cmdReceived = "Unknown";
-	
+
 	_isStreamAttached = false;
 	_pOutboundConnectivity = NULL;
 	_pOutStream = NULL;
@@ -106,7 +108,9 @@ WrtcConnection::WrtcConnection()
 	SetControlled();	// default as controlled (let browser be pushy)
 	SpawnStunProtocols();	// get a BaseIceProtocol for each network interface
 	SetRmsCapabilities(); // set rms enabled capabilities
-	
+
+	WriteSessionCount(); // write initial session counter value to file
+
 	_ticks = 0;
 	_capabPeer.hasHeartbeat = false;
 	_capabRms.hasHeartbeat = false;
@@ -147,12 +151,12 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 	_clientId = "";
 	_rmsClientId = "";
 	_cmdReceived = "Unknown";
-	
+
 	_isStreamAttached = false;
 
 	_customParameters = settings;
 	_streamChannelId = 0xFFFFFFFF;
-	
+
 	_pOutboundConnectivity = NULL;
 	_pOutStream = NULL;
 	_commandChannelId = 0;
@@ -165,7 +169,7 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 	_useSrtp = false;
 	_retryConnectionProcess = false;
 	_slowTimerCounter = 0;
-	
+
 	_waiting = false;
 	_pendingFlag = 0;
 	_pPendingInStream = NULL;
@@ -173,7 +177,9 @@ WrtcConnection::WrtcConnection(WrtcSigProtocol * pSig, Variant & settings)
 	SetControlled();	// default as controlled (let browser be pushy)
 	SpawnStunProtocols();	// get a BaseIceProtocol for each network interface
 	SetRmsCapabilities(); // set rms enabled capabilities
-	
+
+	WriteSessionCount(); // write initial session counter value to file
+
 	_ticks = 0;
 	_capabPeer.hasHeartbeat = false;
 	_capabRms.hasHeartbeat = false;
@@ -203,7 +209,8 @@ uint32_t WrtcConnection::getSessionCounts()
 
 WrtcConnection::~WrtcConnection() {
 	_sessionCounter--;
-	
+	WriteSessionCount();
+
 	//Output the time we had streaming going to this client
 	std::stringstream sstrm;
 	sstrm << GetId();
@@ -431,7 +438,7 @@ WrtcConnection::~WrtcConnection() {
 		_stuns[i]->Terminate();
 	}
 	_stuns.clear();
-	
+
 	_bestStun = NULL;
 
 	if (_pSig != NULL) {
@@ -465,7 +472,7 @@ WrtcConnection::~WrtcConnection() {
 		delete _pSDP;
 		_pSDP = NULL;
 	}
-	
+
 	if (_pSDPInfo != NULL) {
 		delete _pSDPInfo;
 		_pSDPInfo = NULL;
@@ -522,7 +529,7 @@ bool WrtcConnection::IsWaiting() {
 }
 
 bool WrtcConnection::SetStreamName(string streamName, bool useSrtp) {
-	// This is a bit weird to have here, but since this object gets instantiated way before 
+	// This is a bit weird to have here, but since this object gets instantiated way before
 	// actual client join, this serves as a good proxy for the start of the peering connection
 	std::stringstream sstrm;
 	sstrm << GetId();
@@ -570,7 +577,7 @@ bool WrtcConnection::SetStreamName(string streamName, bool useSrtp) {
 		metadata["callback"]["protocolID"] = GetId();
 		metadata["callback"]["streamName"] = streamName;
 
-		if (!pSMR->ResolveMetadata(streamName, metadata, true)) { // lazy pull should be executing here. 
+		if (!pSMR->ResolveMetadata(streamName, metadata, true)) { // lazy pull should be executing here.
 			FATAL("Unable to obtain metadata for stream name %s", STR(streamName));
 			return false;
 		}
@@ -595,7 +602,7 @@ bool WrtcConnection::SetStreamName(string streamName, bool useSrtp) {
 			DEBUG("creating out stream in SetStreamName");
 			return CreateOutStream(streamName, pInStream, pSM);
 		}
-		
+
 		return false;
 	}
 	return true;
@@ -783,16 +790,16 @@ void WrtcConnection::Start(bool hasNewCandidate) {
 				_retryConnectionProcess = true; // indicate that we want to restart
 			}
 		}
-		
+
 		return;
 	}
-	
+
 	// Sanity check...
 	if (!InitializeCertificate()) {
 		WARN("Failed to initialize certificates!");
 		return;
 	}
-			
+
 	// Issue an SDP if we haven't received one yet
 	if (!_gotSDP) {
 		if (_sentSDP) {
@@ -899,7 +906,7 @@ bool WrtcConnection::SetSDP(string sdp, bool offer) {
 	}
 
 	_pSDPInfo = WrtcSDP::ParseSdpStr2(sdp);
-	
+
 	if (_pSDPInfo == NULL) {
 		FATAL("Generated SDP info is null!");
 		return false;
@@ -1009,7 +1016,7 @@ bool WrtcConnection::FastTick() {
 					_pSig->SetIceState(WRTC_ICE_CONNECTED);
 				}
 
-				INFO("WebRTC connection established: STUN (%s [%s]), Candidate (%s).", 
+				INFO("WebRTC connection established: STUN (%s [%s]), Candidate (%s).",
 						STR(_bestStun->GetHostIpStr()), (_bestStun->IsTcpType() ? STR("TCP") : STR("UDP")), STR(pCan->GetShortString()));
 				PROBE_POINT("webrtc", "sess1", "candidate_selected", false);
 				//Output the time it took to get to this point
@@ -1050,8 +1057,8 @@ bool WrtcConnection::FastTick() {
 
 // Commenting the below block to clean up the unused stuns as we think this would fix RDKC-4665(as per tiage/RM, RDKC-4665 occurs due to the fix provided for RDKC-4066)
 #if 0
-				// At this point we have a connection path and are setting up protocol stacks. we should now 
-				// cleanup the stuns that are not going to be used so that we dont have a bunch of extra processing 
+				// At this point we have a connection path and are setting up protocol stacks. we should now
+				// cleanup the stuns that are not going to be used so that we dont have a bunch of extra processing
 				// and messages being sent.
 				INFO("Deleting unused stuns: %d", _stuns.size());
 				// Dont delete the TCP stun as it still has some asynchronous stuff going on.  There is only one
@@ -1072,10 +1079,10 @@ bool WrtcConnection::FastTick() {
 #endif
 			}
 		}
-		
+
 		return false;	// cause switch to slow tick
 	}
-	
+
 	return true;	// continue the ticking!!
 }
 
@@ -1156,12 +1163,12 @@ bool WrtcConnection::SlowTick() {
 
 	if (_bestStun) {
 		_slowTimerCounter++;
-		
+
 		if (!(_bestStun->SlowTick(false))) {
 			// There is no valid candidate (failure of connection establishment)
 			// there should be a number of retry on the slow timer and should not wait
 			// for RRS to disconnect the connection
-			
+
 			if (_slowTimerCounter > 2 && _pSig != NULL ) {
 				// Delete this connection after 30s
 				_pSig->EnqueueForDelete();
@@ -1236,7 +1243,7 @@ bool WrtcConnection::SetStunServer(string ipPortStr) {
 
 	FOR_VECTOR(_stuns, i) {
 		_stuns[i]->SetStunServer(resolvedIpPortStr);
-	}	
+	}
 	return true;
 }
 
@@ -1309,7 +1316,7 @@ bool WrtcConnection::SetCandidate(Candidate * pCan) {
 
 bool WrtcConnection::SetControlled(bool isControlled) {
 	_isControlled = isControlled;
-	
+
 	return true;
 }
 
@@ -1450,7 +1457,7 @@ bool WrtcConnection::GetInterfaceIps(vector<string> & ips) {
 
 		// Only use non-loopback, non-local-link, and non-empty ip's
 		if ( ( currIface->ifa_name[0] == 'l' && currIface->ifa_name[1] == 'o' ) ||
-				( address.find( "fe80::" ) != std::string::npos ) || 
+				( address.find( "fe80::" ) != std::string::npos ) ||
 				( address.size() == 0 )) {
 				INFO("Skipping: %s", STR(address));
 				continue;
@@ -1517,7 +1524,7 @@ WrtcConnection::WrtcTimer * WrtcConnection::WrtcTimer
 ::CreateFastTimer(uint32_t ms, WrtcConnection * pWrtc) {
 	WrtcTimer * pTimer = new WrtcTimer(pWrtc);
 	pTimer->EnqueueForHighGranularityTimeEvent(ms);
-	
+
 	return pTimer;
 }
 
@@ -1525,7 +1532,7 @@ WrtcConnection::WrtcTimer * WrtcConnection::WrtcTimer
 ::CreateSlowTimer(uint32_t secs, WrtcConnection * pWrtc) {
 	WrtcTimer * pTimer = new WrtcTimer(pWrtc);
 	pTimer->EnqueueForTimeEvent(secs);
-	
+
 	return pTimer;
 }
 
@@ -1626,7 +1633,7 @@ bool WrtcConnection::EnqueueForOutbound() {
 				if(IsSctpAlive()) {
 					ret = _pSctp->SendData(_streamChannelId, GETIBPOINTER(_outputBuffer), target);
 				}
-				
+
 				// Check first the returned value
 				if (ret > 0) {
 					// Everything seems ok. Read the buffer, reset the zero count,
@@ -1662,7 +1669,7 @@ bool WrtcConnection::EnqueueForOutbound() {
 	}
 
 	_outputBuffer.IgnoreAll();
-	
+
 	if (_pDtls == NULL) {
 		// No outbound protocol yet, just return as true
 		return true;
@@ -1726,7 +1733,7 @@ bool WrtcConnection::InitializeDataChannel() {
 		_sctpAlive = true;
 		_pSctp->Initialize(settings);
 	}
-	
+
 	// Link the protocols together STUN -> DTLS -> SCTP -> WrtcConnection
 	_pDtls->SetFarProtocol(_bestStun);
 
@@ -1742,7 +1749,7 @@ bool WrtcConnection::InitializeDataChannel() {
 		FATAL("Error in data channel initilaize : sctp is not alive : %d",_sctpAlive);
 		EnqueueForDelete();
 	}
-	
+
 	return true;
 }
 
@@ -1820,7 +1827,7 @@ bool WrtcConnection::SignalDataChannelInput(uint32_t id, const uint8_t *pBuffer,
 			FATAL("Unable to parse JSON string!");
 			return false;
 		}
-		
+
 		return HandleDataChannelMessage(msg);
 	} else if (_streamChannelId == id) {
 		//TODO
@@ -1830,7 +1837,7 @@ bool WrtcConnection::SignalDataChannelInput(uint32_t id, const uint8_t *pBuffer,
 		WARN("Unknown channel ID: %"PRIu32, id);
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -1909,7 +1916,7 @@ bool WrtcConnection::HandleDataChannelMessage(Variant &msg) {
 				// Nothing to do here
 				return true;
 			}
-			
+
 			// Prepare the response
 			msg["type"] = "fmp4Response";
 
@@ -1930,7 +1937,7 @@ bool WrtcConnection::HandleDataChannelMessage(Variant &msg) {
 
 				string rsn = lowerCase(streamName);
 				_isPlaylist = (rsn.rfind(".lst") == rsn.length() - 4);
-				bool isLazyPullVod = _isPlaylist ? false : 
+				bool isLazyPullVod = _isPlaylist ? false :
 					(rsn.rfind(".vod") == rsn.length() - 4);
 				bool streamCanBeSent = true;
 				uint8_t retries = 10;
@@ -1939,7 +1946,7 @@ bool WrtcConnection::HandleDataChannelMessage(Variant &msg) {
 						streamCanBeSent = false;
 					} else {
 						//wait until requested stream is set up
-						while (retries-- > 0 && 
+						while (retries-- > 0 &&
 							!SetStreamName(streamName, useSrtp)) {
 						}
 						streamCanBeSent = (retries > 0);
@@ -1956,13 +1963,13 @@ bool WrtcConnection::HandleDataChannelMessage(Variant &msg) {
 				} else {
 					streamCanBeSent = SendStreamAsMp4(streamName);
 				}
-				
+
 				// Send out the outbound FMP4
 				if (streamCanBeSent) {
-					msg["payload"]["description"] = 
+					msg["payload"]["description"] =
 						"Outbound FMP4 stream created.";
 					msg["payload"]["status"] = "SUCCESS";
-					
+
 					msg.SerializeToJSON(response, true);
 					return SendCommandData(response);
 				} else {
@@ -2000,7 +2007,7 @@ bool WrtcConnection::HandleDataChannelMessage(Variant &msg) {
 					((OutNetFMP4Stream*)_pOutNetMP4Stream)->SignalPing();
 				}
 			}
-			
+
 			return true;
 		}
 #ifdef WRTC_CAPAB_HAS_HEARTBEAT
@@ -2129,7 +2136,7 @@ bool WrtcConnection::SendCommandData(string &message) {
 	_outbandBuffer.IgnoreAll();
 	_outbandBuffer.ReadFromString(message);
 
-	if (_pSctp->SendData(_commandChannelId, GETIBPOINTER(_outbandBuffer), 
+	if (_pSctp->SendData(_commandChannelId, GETIBPOINTER(_outbandBuffer),
 			GETAVAILABLEBYTESCOUNT(_outbandBuffer), false) > 0) {
 //#ifdef WEBRTC_DEBUG
 		// Moving the log into this as it will spam if metadata are being sent out
@@ -2143,7 +2150,7 @@ bool WrtcConnection::SendCommandData(string &message) {
 	}
 
 	FATAL("Error sending data over command channel!");
-	return false;	
+	return false;
 }
 
 bool WrtcConnection::InitializeCertificate() {
@@ -2314,7 +2321,7 @@ void WrtcConnection::SignalEvent(string eventName, Variant &args) {
 		}
 		uint32_t pendingFlagCheck = _pendingFlag & PENDING_COMPLETE;
 		if ((pendingFlagCheck == PENDING_COMPLETE)
-			|| (_pPendingInStream->GetType() == ST_IN_NET_RTP && 
+			|| (_pPendingInStream->GetType() == ST_IN_NET_RTP &&
 				pendingFlagCheck == (PENDING_STREAM_REGISTERED | PENDING_HAS_VCODEC)
 				)
 			) {
@@ -2368,8 +2375,8 @@ string WrtcConnection::GetBaseStreamName(string const &streamName) {
 	return streamName;
 }
 
-bool WrtcConnection::IsSameStream(string const &localStreamName, 
-		string const &streamName) { 
+bool WrtcConnection::IsSameStream(string const &localStreamName,
+		string const &streamName) {
 	if (localStreamName == streamName) {
 		return true;
 	}
@@ -2458,7 +2465,7 @@ void WrtcConnection::SetPeerCapabilities(string capabilities) {
 	//TODO: include other features
 
 	// Check for the features
-#ifdef WRTC_CAPAB_HAS_HEARTBEAT	
+#ifdef WRTC_CAPAB_HAS_HEARTBEAT
 	if (capabilities.find(WRTC_CAPAB_STR_HAS_HEARTBEAT) != string::npos) {
 		INFO("Peer has support for heartbeat mechanism.");
 		_capabPeer.hasHeartbeat = true;
@@ -2478,7 +2485,7 @@ void WrtcConnection::SetRmsCapabilities() {
 	// Reset values here
 	_capabRms.hasHeartbeat = false;
 	//TODO: include other features
-	
+
 #ifdef WRTC_CAPAB_HAS_HEARTBEAT
 	_capabRms.hasHeartbeat = true;
 #endif // WRTC_CAPAB_HAS_HEARTBEAT
@@ -2603,4 +2610,13 @@ bool WrtcConnection::ResolveDomainName(string domainName, string &resolvedName) 
 	return true;
 }
 
+void WrtcConnection::WriteSessionCount() {
+  ofstream sessionCounterFile;
+  sessionCounterFile.open(SESSION_COUNTER_FILE, ios::trunc);
+  if(!sessionCounterFile.is_open()) {
+    WARN("Not able to write to session counter file (%s)", SESSION_COUNTER_FILE);
+  }
+  sessionCounterFile << _sessionCounter;
+  sessionCounterFile.close();
+}
 #endif // HAS_PROTOCOL_WEBRTC
