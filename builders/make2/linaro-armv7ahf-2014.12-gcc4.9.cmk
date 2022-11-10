@@ -30,7 +30,7 @@ TARGET_OS_VERSION=gcc4.9
 TARGET_OS_ARCH=armv7ahf
 TARGET_OS_UNAME="linaro-armv7ahf-2014.12-gcc4.9"
 
-export PLATFORM_INCLUDE="-I$RDK_PROJECT_ROOT_PATH/breakpadwrap/ -I$RDK_PROJECT_ROOT_PATH/opensource/include -I$RDK_PROJECT_ROOT_PATH/opensource/openssl/include -I$RDK_PROJECT_ROOT_PATH/rdklogger/include -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/share/sc_config -I$RDK_PROJECT_ROOT_PATH/opensource/src/soxr/src/ -I$RDK_PROJECT_ROOT_PATH/plugins -I$RDK_PROJECT_ROOT_PATH/utility/sysUtils/include -I$RDK_PROJECT_ROOT_PATH/libsyswrapper/source/"
+export PLATFORM_INCLUDE="-I$RDK_PROJECT_ROOT_PATH/breakpadwrap/ -I$RDK_PROJECT_ROOT_PATH/opensource/include -I${RDK_FSROOT_PATH}/usr/include/rtmessage -I$RDK_PROJECT_ROOT_PATH/opensource/openssl/include -I$RDK_PROJECT_ROOT_PATH/rdklogger/include -I$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/share/sc_config -I$RDK_PROJECT_ROOT_PATH/opensource/src/soxr/src/ -I$RDK_PROJECT_ROOT_PATH/plugins -I$RDK_PROJECT_ROOT_PATH/utility/sysUtils/include -I$RDK_PROJECT_ROOT_PATH/libsyswrapper/source/"
 
 export PLATFORM_LIBS="-L$RDK_PROJECT_ROOT_PATH/breakpadwrap -lbreakpadwrap -L$RDK_PROJECT_ROOT_PATH/sdk/fsroot/src/../../../opensource/lib -L$RDK_PROJECT_ROOT_PATH/rdklogger/src/.libs -lrdkloggers  -lssl -lcrypto  -llog4c -ldl -lrt -lpthread -L$RDK_PROJECT_ROOT_PATH/opensource/src/soxr/build/src/ -lsoxr -L$RDK_PROJECT_ROOT_PATH/plugins/soc -lhalrtc -L$RDK_PROJECT_ROOT_PATH/utility/sysUtils/src -lsysutils -L$RDK_PROJECT_ROOT_PATH/libsyswrapper/source/.libs/  -lsecure_wrapper"
 
